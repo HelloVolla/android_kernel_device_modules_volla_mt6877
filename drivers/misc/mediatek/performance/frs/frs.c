@@ -47,6 +47,74 @@ static int eara_enable;
 static DEFINE_MUTEX(pre_lock);
 static struct sock *frs_nl_sk;
 
+struct frs_info frs_data;
+EXPORT_SYMBOL(frs_data);
+
+static ssize_t frs_info_show(struct kobject *kobj,
+	struct kobj_attribute *attr, char *buf)
+{
+	int len = 0;
+
+	len = snprintf(buf + len, PAGE_SIZE - len, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+		frs_data.enable,
+		frs_data.activated, frs_data.pid,
+		frs_data.target_fps, frs_data.diff,
+		frs_data.tpcb, frs_data.tpcb_slope,
+		frs_data.ap_headroom, frs_data.n_sec_to_ttpcb,
+		frs_data.frs_target_fps, frs_data.real_fps,
+		frs_data.target_tpcb, frs_data.ptime);
+
+	return len;
+}
+
+static ssize_t frs_info_store(struct kobject *kobj,
+	struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int enable, act, target_fps, tpcb, tpcb_slope;
+	int ap_headroom, n_sec_to_ttpcb;
+	int pid, diff;
+	int frs_target_fps, real_fps, target_tpcb, ptime;
+
+	if (sscanf(buf, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d", &enable, &act, &pid,
+		&target_fps, &diff, &tpcb, &tpcb_slope, &ap_headroom, &n_sec_to_ttpcb,
+		&frs_target_fps, &real_fps, &target_tpcb, &ptime) == 13) {
+		if ((ap_headroom >= -1000) && (ap_headroom <= 1000)) {
+			/*
+			 * if (tm_data.is_cputcm)
+			 *	therm_intf_write_cputcm(ap_headroom, AP_NTC_HEADROOM_TCM_OFFSET);
+			 * therm_intf_write_csram(ap_headroom, AP_NTC_HEADROOM_OFFSET);
+			 */
+			frs_data.ap_headroom = ap_headroom;
+		} else {
+			pr_info("[%s] invalid ap head room input\n", __func__);
+			return -EINVAL;
+		}
+
+		/*
+		 * if (tm_data.is_cputcm)
+		 *	therm_intf_write_cputcm(tpcb, TPCB_TCM_OFFSET);
+		 * therm_intf_write_csram(tpcb, TPCB_OFFSET);
+		 */
+
+		frs_data.enable = enable;
+		frs_data.activated = act;
+		frs_data.tpcb = tpcb;
+		frs_data.pid = pid;
+		frs_data.target_fps = target_fps;
+		frs_data.diff = diff;
+		frs_data.tpcb_slope = tpcb_slope;
+		frs_data.n_sec_to_ttpcb = n_sec_to_ttpcb;
+		frs_data.frs_target_fps = frs_target_fps;
+		frs_data.real_fps = real_fps;
+		frs_data.target_tpcb = target_tpcb;
+		frs_data.ptime = ptime;
+	} else {
+		pr_info("[%s] invalid input\n", __func__);
+		return -EINVAL;
+	}
+
+	return count;
+}
 static void set_tfps_diff(int max_cnt, int *pid, unsigned long long *buf_id, int *tfps, int *diff)
 {
 	int i;
@@ -243,9 +311,11 @@ static ssize_t frs_nl_id_show(struct kobject *kobj,
 }
 static struct kobj_attribute frs_nl_id_attr = __ATTR_RO(frs_nl_id);
 static struct kobj_attribute frs_pid_attr = __ATTR_RO(frs_pid);
+static struct kobj_attribute frs_info_attr = __ATTR_RW(frs_info);
 static struct attribute *thermal_attrs[] = {
 	&frs_nl_id_attr.attr,
 	&frs_pid_attr.attr,
+	&frs_info_attr.attr,
 	NULL
 };
 static struct attribute_group thermal_attr_group = {
@@ -267,7 +337,7 @@ int __init eara_thrm_pre_init(void)
 	eara_pre_change_single_fp =  pre_change_single_event;
 	eara_netlink_init();
 
-	ret = sysfs_merge_group(kernel_kobj, &thermal_attr_group);
+	ret = sysfs_create_group(kernel_kobj, &thermal_attr_group);
 	if (ret) {
 		pr_info("%s failed to create thermal sysfs, ret=%d!\n", TAG, ret);
 		return ret;
