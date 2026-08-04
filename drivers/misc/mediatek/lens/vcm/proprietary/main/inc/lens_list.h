@@ -133,6 +133,21 @@ extern int GT9772AF_Release(struct inode *a_pstInode, struct file *a_pstFile);
 extern int GT9772AF_GetFileName(unsigned char *pFileName);
 
 
+/*prize add by xiaguohong 20240912 start*/
+#define PD9402A_SetI2Cclient PD9402A_SetI2Cclient_Main
+#define PD9402A_Ioctl PD9402A_Ioctl_Main
+#define PD9402A_Release PD9402A_Release_Main
+#define PD9402A_PowerDown PD9402A_PowerDown_Main
+#define PD9402A_GetFileName PD9402A_GetFileName_Main
+extern int PD9402A_SetI2Cclient(struct i2c_client *pstAF_I2Cclient,
+				 spinlock_t *pAF_SpinLock, int *pAF_Opened);
+extern long PD9402A_Ioctl(struct file *a_pstFile, unsigned int a_u4Command,
+			   unsigned long a_u4Param);
+extern int PD9402A_Release(struct inode *a_pstInode, struct file *a_pstFile);
+extern int PD9402A_PowerDown(struct i2c_client *pstAF_I2Cclient,
+				int *pAF_Opened);
+extern int PD9402A_GetFileName(unsigned char *pFileName);
+/*prize add by xiaguohong 20240912 end*/
 #define GT9768AF_SetI2Cclient GT9768AF_SetI2Cclient_Main
 #define GT9768AF_Ioctl GT9768AF_Ioctl_Main
 #define GT9768AF_Release GT9768AF_Release_Main

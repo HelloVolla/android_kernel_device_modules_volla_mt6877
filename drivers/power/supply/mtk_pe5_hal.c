@@ -286,6 +286,10 @@ int pe50_hal_init_hardware(struct chg_alg_device *alg, const char **support_ta,
 	hal->dev = info->dev;
 	hal->bat_psy = devm_power_supply_get_by_phandle(hal->dev, "gauge");
 	if (IS_ERR_OR_NULL(hal->bat_psy)) {
+		// drv add tankaikun, fix pe5 cannot get soc, start
+		hal->bat_psy = power_supply_get_by_name("battery");
+		PE50_ERR("retry get bat psy again\n");
+		// drv add tankaikun, fix pe5 cannot  get soc, end
 		ret = IS_ERR(hal->bat_psy) ? PTR_ERR(hal->bat_psy) : -ENODEV;
 		PE50_ERR("get bat_psy fail(%d)\n", ret);
 	}
@@ -448,6 +452,18 @@ static int pe50_get_ibat(struct pe50_hal *hal)
 	int ret = 0;
 	union power_supply_propval val = {0,};
 
+	// drv add tankaikun, fix pe5 cannot get soc, start
+	if (IS_ERR_OR_NULL(hal->bat_psy)) {
+		hal->bat_psy = devm_power_supply_get_by_phandle(hal->dev, "gauge");
+		if (IS_ERR_OR_NULL(hal->bat_psy)) {
+			hal->bat_psy = power_supply_get_by_name("battery");
+			PE50_ERR("retry get bat psy again\n");
+			ret = IS_ERR(hal->bat_psy) ? PTR_ERR(hal->bat_psy) : -ENODEV;
+			PE50_ERR("get bat_psy fail(%d)\n", ret);
+		}
+	}
+	// drv add tankaikun, fix pe5 cannot get soc, end
+
 	if (IS_ERR_OR_NULL(hal->bat_psy))
 		goto out;
 
@@ -499,6 +515,18 @@ int pe50_hal_get_soc(struct chg_alg_device *alg, u32 *soc)
 	int ret = -EOPNOTSUPP;
 	union power_supply_propval val = {0,};
 	struct pe50_hal *hal = chg_alg_dev_get_drv_hal_data(alg);
+
+	// drv add tankaikun, fix pe5 cannot get soc, start
+	if (IS_ERR_OR_NULL(hal->bat_psy)) {
+		hal->bat_psy = devm_power_supply_get_by_phandle(hal->dev, "gauge");
+		if (IS_ERR_OR_NULL(hal->bat_psy)) {
+			hal->bat_psy = power_supply_get_by_name("battery");
+			PE50_ERR("retry get bat psy again\n");
+			ret = IS_ERR(hal->bat_psy) ? PTR_ERR(hal->bat_psy) : -ENODEV;
+			PE50_ERR("get bat_psy fail(%d)\n", ret);
+		}
+	}
+	// drv add tankaikun, fix pe5 cannot get soc, end
 
 	if (IS_ERR_OR_NULL(hal->bat_psy))
 		goto out;

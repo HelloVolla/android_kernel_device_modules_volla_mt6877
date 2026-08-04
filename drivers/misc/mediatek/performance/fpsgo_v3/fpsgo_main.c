@@ -144,6 +144,9 @@ int powerhal_tid;
 int cap_ready;
 #endif
 
+void (*fpsgo2game_noitfy_queue_end)(int);
+EXPORT_SYMBOL_GPL(fpsgo2game_noitfy_queue_end);
+
 /* TODO: event register & dispatch */
 int fpsgo_is_enable(void)
 {
@@ -280,6 +283,8 @@ static void fpsgo_notifier_wq_cb_qudeq(int qudeq,
 					cur_pid);
 			fpsgo_ctrl2comp_enqueue_end(cur_pid, curr_ts,
 					id, sf_buf_id);
+			if (fpsgo2game_noitfy_queue_end)
+				fpsgo2game_noitfy_queue_end(cur_pid);
 		}
 		break;
 	case 0:

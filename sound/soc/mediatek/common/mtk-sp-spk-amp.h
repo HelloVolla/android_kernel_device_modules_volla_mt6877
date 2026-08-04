@@ -24,7 +24,9 @@ struct mtk_spk_i2c_ctrl {
 #define MTK_SPK_GOODIX_TFA98XX_STR "MTK_SPK_GOODIX_TFAXXXX"
 #define MTK_SPK_AKM_AK7709_STR "MTK_SPK_AKM_AK7709"
 #define MTK_SPK_FOURSEMI_FS16XX_STR "MTK_SPK_FOURSEMI_FS16XX"
-
+//drv add by pzp, support aw883xx, start
+#define MTK_SPK_AWINIC_AW883XX_STR  "MTK_SPK_AWINIC_AW883XX"
+//drv add by pzp, support aw883xx, end
 #define MTK_SPK_I2S_0_STR "MTK_SPK_I2S_0"
 #define MTK_SPK_I2S_1_STR "MTK_SPK_I2S_1"
 #define MTK_SPK_I2S_2_STR "MTK_SPK_I2S_2"
@@ -62,6 +64,9 @@ enum mtk_spk_type {
 	MTK_SPK_MEDIATEK_MT6660,
 	MTK_SPK_GOODIX_TFA98XX,
 	MTK_SPK_MEDIATEK_RT5512,
+//drv add by pzp, support aw883xx, start
+	MTK_SPK_AWINIC_AW883XX,
+//drv add by pzp, support aw883xx, end
 	MTK_SPK_AKM_AK7709,
 	MTK_SPK_FOURSEMI_FS16XX,
 	MTK_SPK_TYPE_NUM
@@ -100,6 +105,10 @@ enum mtk_spk_i2s_type {
 	MTK_SPK_I2S_TYPE_NUM
 };
 
+#if IS_ENABLED(CONFIG_MTK_BATTERY_PERCENT_THROTTLING)
+int mtk_spk_get_reduceDb(void);
+void mtk_spk_set_reduceDb(int reduce_db);
+#endif
 int mtk_spk_get_type(void);
 extern void mtk_spk_set_type(int spk_type);
 int mtk_spk_get_i2s_out_type(void);

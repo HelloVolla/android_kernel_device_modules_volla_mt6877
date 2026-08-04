@@ -1,0 +1,53 @@
+#
+# Copyright (C) 2015 MediaTek Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+
+obj-$(CONFIG_CAMERA_GC0301)		+= prize_dual_camera/
+obj-$(CONFIG_PRIZE_FM)		+= fm_ant/
+obj-$(CONFIG_PRIZE_AW2016A)		+= aw2016a/
+obj-$(CONFIG_LEDS_AW210XX)		+= AW210XX/
+obj-$(CONFIG_LEDS_AW22127)		+= aw22127/
+obj-$(CONFIG_PRIZE_HARDWARE_INFO)		+= hardware_info/
+obj-$(CONFIG_PRIZE_EXERGEN)		+= prize_exergen/
+obj-$(CONFIG_PRIZE_ENDOSCOPE) += endoscope/
+#prize add by wangfei for motor aw86927 20221021 start
+obj-$(CONFIG_AWINIC_HAPTIC_HV) += haptic_hv/
+#prize add by wangfei for motor aw86927 20221021 end
+#drv add by situziyin 20230309 start
+obj-$(CONFIG_PRIZE_PIXEL_MANAGER) += pixel_manager/
+#drv added by wangwei1, secondary screen driver, 20230606-start
+obj-$(CONFIG_PRIZE_LCD_GC9A01) += lcd_gc9a01/
+obj-$(CONFIG_PRIZE_LCD_GC9A01_240) += lcd_gc9a01_240/
+#drv added by wangwei1, secondary screen driver, 20230606-end
+#drv add by situziyin 20230309 end
+#prize add by xuejian for gesture 20230210 start
+obj-$(CONFIG_PRIZE_COMMON_NODE) += prize_common_node/
+#prize add by xuejian for gesture 20230210 end
+#drv add by wmd 20230529,add digital lcd,start
+obj-$(CONFIG_PRIZE_DIGITAL_LCD) += dlcd/
+#drv add by wmd 20230529,add digital lcd,end 
+#drv-add by shenwenbin for oled panel 20231213 start
+obj-$(CONFIG_PRIZE_OLED_NODE) += prize_oled_node/
+#drv-add by shenwenbin for oled panel 20231213 end
+#drv add by lipengpeng 20231223 start
+obj-$(CONFIG_CAMERA_TTM)		+= ttm/
+obj-$(CONFIG_CAMERA_SERIAL_CAMERA)		+= serial_camera/
+#drv add by lipengpeng 20231223 end
+#DRV added by chenjiaxi, add miniscreen driver, start
+obj-$(CONFIG_DRV_MINISCREEN) += miniscreen/
+#DRV added by chenjiaxi, add miniscreen driver, end
+obj-$(CONFIG_DRV_ADC_GMS_DETECT) += gms_adc/
+obj-$(CONFIG_PRIZE_LEPTON_FILR)		+= FILR/
+# pri BQS33-208 added by ocean 20240625 begin
+obj-$(CONFIG_PRIZE_SIM_STATE) += prize_sim_state/
+# pri BQS33-208 added by ocean 20240625 end
+obj-$(CONFIG_PRIZE_CAMPING_LIGHT) += camping_light/

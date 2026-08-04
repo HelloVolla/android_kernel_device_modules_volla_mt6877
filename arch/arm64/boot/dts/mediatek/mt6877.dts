@@ -2530,7 +2530,16 @@
 		soc-max-stage = <1>;
 		soc-limit-threshold = <15>;
 	};
-
+/*prize add by xuejian for gesture start*/
+    common_node: common_node{
+        compatible = "coosea,common_node";                                                                                                                                                                                                                                    
+    };   
+/*prize add by xuejian for gesture end*/
+	//drv-add by shenwenbin for oled panel 20231213 start
+    oled_node: oled_node{
+        compatible = "coosea,oled";
+    };
+    //drv-add by shenwenbin for oled panel 20231213 end
 	scpsys: power-controller@10006000 {
 		compatible = "mediatek,mt6877-scpsys", "syscon";
 		reg = <0 0x10006000 0 0x1000>;	/* spm */
@@ -3060,6 +3069,62 @@
 		vbat-threshold = <4150>;
 	};
 
+	// drv add tankaikun, enable pe5 algo, 20241104 start
+	pe5: pe5 {
+		compatible = "mediatek,charger,pe5";
+		gauge = <&mtk_gauge>;
+
+		polling-interval = <10000>;
+		ta-cv-ss-repeat-tmin = <25>;
+		vbat-cv = <4350>;
+		start-soc-min = <0>;
+		start-soc-max = <90>;
+		start-vbat-max = <4300>;
+		idvchg-term = <500>;
+		idvchg-step = <50>;
+		ita-level = <3000 2500 2000 1500>;
+		rcable-level = <250 300 375 500>;
+		ita-level-dual = <6000 3700 3400 3000>;
+		rcable-level-dual = <230 350 450 550>;
+		idvchg-ss-init = <1000>;
+		idvchg-ss-step = <250>;
+		idvchg-ss-step1 = <100>;
+		idvchg-ss-step2 = <50>;
+		idvchg-ss-step1-vbat = <4000>;
+		idvchg-ss-step2-vbat = <4200>;
+		ta-blanking = <400>;
+		swchg-aicr = <0>;
+		swchg-ichg = <1200>;
+		swchg-aicr-ss-init = <400>;
+		swchg-aicr-ss-step = <200>;
+		swchg-off-vbat = <4250>;
+		force-ta-cv-vbat = <4250>;
+		chg-time-max = <5400>;
+		tta-level-def = <0 0 0 0 25 50 60 70 80>;
+		tta-curlmt = <0 0 0 0 0 300 600 900 (-1)>;
+		tta-recovery-area = <3>;
+		tbat-level-def = <0 0 0 5 25 40 43 46 55>;
+		tbat-curlmt = <(-1) (-1) (-1) 300 0 600 900 1050 (-1)>;
+		tbat-recovery-area = <3>;
+		tdvchg-level-def = <0 0 0 5 25 55 60 65 70>;
+		tdvchg-curlmt = <(-1) (-1) (-1) 300 0 300 600 900 (-1)>;
+		tdvchg-recovery-area = <3>;
+		tswchg-level-def = <0 0 0 5 25 65 70 75 80>;
+		tswchg-curlmt = <(-1) (-1) (-1) 200 0 200 300 400 (-1)>;
+		tswchg-recovery-area = <3>;
+		ifod-threshold = <200>;
+		rsw-min = <20>;
+		ircmp-rbat = <40>;
+		ircmp-vclamp = <0>;
+		vta-cap-min = <6800>;
+		vta-cap-max = <11000>;
+		ita-cap-min = <1000>;
+		support-ta = "pca_ta_pps", "pd_adapter";
+		allow-not-check-ta-status;
+		vbat-threshold = <4150>;
+	};
+	// drv add tankaikun, enable pe5 algo, 20241104 end
+
 	charger: charger {
 		compatible = "mediatek,charger";
 		gauge = <&mtk_gauge>;
@@ -3148,8 +3213,7 @@
 	mtk_leds: mtk-leds {
 		backlight {
 			label = "lcd-backlight";
-			max-brightness = <255>;
-			max-hw-brightness = <2047>;
+			max-hw-brightness = <2047>;//drv modify backlight function-pengzhipeng-20241028
 		};
 	};
 
@@ -3424,7 +3488,7 @@
 
 	irq_nfc: irq_nfc {
 		compatible = "mediatek,irq_nfc-eint";
-	};
+	};	
 
 	drm_wv: drm_wv {
 		compatible = "mediatek,drm_wv";
@@ -5717,7 +5781,7 @@
 			<0>, /*MTK_DRM_OPT_VP_PQ*/
 			<0>, /*MTK_DRM_OPT_GAME_PQ*/
 			<0>, /*MTK_DRM_OPT_MMPATH*/
-			<0>, /*MTK_DRM_OPT_HBM*/
+			<1>, /*MTK_DRM_OPT_HBM drv modify finger */
 			<0>, /*MTK_DRM_OPT_VDS_PATH_SWITCH*/
 			<0>, /*MTK_DRM_OPT_LAYER_REC*/
 			<1>, /*MTK_DRM_OPT_CLEAR_LAYER*/
@@ -5924,6 +5988,7 @@
 				&smi_larb14 &smi_larb16 &smi_larb17 &smi_larb18
 				&smi_larb19 &smi_larb20>;
 		mediatek-common-supply = <&smi_common>;
+		skip-bug-On;
 	};
 
 	smi_larb4: smi-larb4@1602e000 {
@@ -6455,7 +6520,7 @@
 		reg = <0 0x1400c000 0 0x1000>;
 		interrupts = <GIC_SPI 306 IRQ_TYPE_LEVEL_HIGH 0>;
 		clocks = <&mmsys_config_clk CLK_MM_DISP_AAL0>;
-		mtk-aal-support = <1>;
+		mtk-aal-support = <0>;
 		mtk-dre30-support = <0>;
 		mtk-cabc-no-support = <1>;
 		doze-bypass = <0x10001>;

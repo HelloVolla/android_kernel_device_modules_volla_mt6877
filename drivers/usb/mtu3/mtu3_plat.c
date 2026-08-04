@@ -26,6 +26,10 @@
 #include "mtu3_dr.h"
 #include "mtu3_debug.h"
 
+#if IS_ENABLED(CONFIG_MTK_SPM_V4)
+#include "mtk_spm_resource_req.h"
+#endif
+
 #define PHY_MODE_DPPULLUP_SET 5
 #define PHY_MODE_DPPULLUP_CLR 6
 #define PHY_MODE_SUSPEND_DEV 9
@@ -55,6 +59,53 @@ struct regmap *usb_cfg_ao;
 /* protect vs voter state */
 static DEFINE_MUTEX(vsv_mutex);
 static unsigned int vsv_use_count;
+
+#if IS_ENABLED(CONFIG_MTK_SPM_V4)
+static void (*slp_set_infra_on)(bool infra_on);
+static bool (*spm_resource_req_by_usb)(unsigned int user, unsigned int req_mask);
+
+void register_slp_set_infra_on_func(void (*slp_set_infra_on_func)(bool infra_on))
+{
+	slp_set_infra_on = slp_set_infra_on_func;
+}
+EXPORT_SYMBOL(register_slp_set_infra_on_func);
+
+void register_spm_resource_req_func(bool (*spm_resource_req_func)(unsigned int user,
+								unsigned int req_mask))
+{
+	spm_resource_req_by_usb = spm_resource_req_func;
+}
+EXPORT_SYMBOL(register_spm_resource_req_func);
+
+void ssusb_spm_request(struct ssusb_mtk *ssusb, int mode)
+{
+	switch (mode) {
+	case MTU3_STATE_RESUME:
+		slp_set_infra_on(false);
+		fallthrough;
+	case MTU3_STATE_POWER_ON:
+		dev_info(ssusb->dev, "RESOURCE_ALL\n");
+		spm_resource_req_by_usb(SPM_RESOURCE_USER_SSUSB, SPM_RESOURCE_ALL);
+		break;
+	case MTU3_STATE_POWER_OFF:
+		dev_info(ssusb->dev, "RESOURCE_NONE\n");
+		spm_resource_req_by_usb(SPM_RESOURCE_USER_SSUSB,
+			SPM_RESOURCE_RELEASE);
+		break;
+	case MTU3_STATE_SUSPEND:
+		dev_info(ssusb->dev, "RESOURCE_SUSPEND\n");
+		spm_resource_req_by_usb(SPM_RESOURCE_USER_SSUSB,
+			SPM_RESOURCE_MAINPLL | SPM_RESOURCE_CK_26M |
+			SPM_RESOURCE_AXI_BUS);
+		slp_set_infra_on(true);
+		break;
+	default:
+		dev_info(ssusb->dev, "%s not support mode\n", __func__);
+		break;
+	}
+
+}
+#endif
 
 static void ssusb_hwrscs_req(struct ssusb_mtk *ssusb,
 	enum mtu3_power_state state)
@@ -230,8 +281,20 @@ static void ssusb_smc_request(struct ssusb_mtk *ssusb,
 void ssusb_set_power_state(struct ssusb_mtk *ssusb,
 	enum mtu3_power_state state)
 {
-	if (ssusb->plat_type == PLAT_FPGA ||
-	   (!ssusb->smc_req && !ssusb->hwrscs_vers))
+
+	if (ssusb->plat_type == PLAT_FPGA)
+		return;
+
+#if IS_ENABLED(CONFIG_MTK_SPM_V4)
+	if (slp_set_infra_on && spm_resource_req_by_usb)
+		ssusb_spm_request(ssusb, state);
+	else
+		dev_info(ssusb->dev,"%s spm request not ready\n", __func__);
+
+	return;
+#endif
+
+	if (!ssusb->smc_req && !ssusb->hwrscs_vers)
 		return;
 
 	if (ssusb->smc_req) {
@@ -250,7 +313,6 @@ void ssusb_set_power_state(struct ssusb_mtk *ssusb,
 	default:
 		return;
 	}
-
 }
 
 void ssusb_set_ux_exit_lfps(struct ssusb_mtk *ssusb)

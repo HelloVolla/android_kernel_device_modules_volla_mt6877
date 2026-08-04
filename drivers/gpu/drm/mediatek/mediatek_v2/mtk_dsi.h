@@ -38,6 +38,13 @@ enum DSI_N_Version {
 	VER_N3,
 };
 
+enum PREURGENT_MODE {
+	PREURGENT_NOT_SUPPORT = 0,
+	PREURGENT_SUPPORT_VDO,
+	PREURGENT_SUPPORT_CMD,
+	PREURGENT_SUPPORT_ALL,
+};
+
 struct mtk_dsi_driver_data {
 	const u32 reg_cmdq0_ofs;
 	const u32 reg_cmdq1_ofs;
@@ -56,6 +63,10 @@ struct mtk_dsi_driver_data {
 	bool new_rst_dsi;
 	const u32 buffer_unit;
 	const u32 sram_unit;
+	const u32 preultra_lo_fifo_us;
+	const u32 preultra_hi_fifo_us;
+	const u32 ultra_lo_fifo_us;
+	const u32 ultra_hi_fifo_us;
 	const u32 urgent_lo_fifo_us;
 	const u32 urgent_hi_fifo_us;
 	const u32 output_valid_fifo_us;
@@ -63,7 +74,7 @@ struct mtk_dsi_driver_data {
 	bool smi_dbg_disable;
 	bool require_phy_reset; /* reset phy before trigger DSI */
 	bool keep_hs_eotp; /* keep HS eotp */
-	bool support_pre_urgent;
+	enum PREURGENT_MODE support_pre_urgent;
 	u32 max_vfp;
 	void (*mmclk_by_datarate)(struct mtk_dsi *dsi,
 		struct mtk_drm_crtc *mtk_crtc, unsigned int en);
@@ -174,6 +185,7 @@ struct mtk_dsi {
 	bool mipi_hopping_sta;
 	bool panel_osc_hopping_sta;
 	unsigned int data_phy_cycle;
+	unsigned int hfp_minimum_dphy;
 	/* for Panel Master dcs read/write */
 	struct mipi_dsi_device *dev_for_PM;
 	atomic_t ulps_async;
@@ -194,7 +206,6 @@ struct mtk_dsi {
 
 enum dsi_porch_type;
 
-u16 mtk_get_gpr(struct mtk_ddp_comp *comp, struct cmdq_pkt *handle);
 s32 mtk_dsi_poll_for_idle(struct mtk_dsi *dsi, struct cmdq_pkt *handle);
 irqreturn_t mtk_dsi_irq_status(int irq, void *dev_id);
 void mtk_dsi_set_mmclk_by_datarate_V1(struct mtk_dsi *dsi,

@@ -175,6 +175,24 @@ static enum IMGSENSOR_RETURN mclk_set(
 
 
 		mutex_unlock(pinst->pmclk_mutex);
+		// prize add by linchong 20220309 start
+		 #if IS_ENABLED(CONFIG_PRIZE_DUAL_CAMERA_ENABLE)
+		 if(sensor_idx == 0) {
+			 ppinctrl_state = pinst->ppinctrl_state[sensor_idx+3][state_index];
+			 mutex_lock(pinst->pmclk_mutex);
+			 if (ppinctrl_state != NULL && !IS_ERR(ppinctrl_state))
+				 pinctrl_select_state(pinst->ppinctrl, ppinctrl_state);
+			 else
+				 pr_info(
+					 "%s : sensor_idx %d fail to set pinctrl, PinIdx %d, Val %d\n",
+					 __func__,
+					 sensor_idx+3,
+					 pin,
+					 pin_state);
+			 mutex_unlock(pinst->pmclk_mutex);
+		 }
+		#endif
+		// prize add by linchong 20220309 end
 	}
 	return ret;
 }

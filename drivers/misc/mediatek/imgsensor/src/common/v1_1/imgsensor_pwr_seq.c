@@ -11,6 +11,104 @@
 
 /* Legacy design */
 struct IMGSENSOR_HW_POWER_SEQ sensor_power_sequence[] = {
+// prize add by chenwenhui for camera start
+#if defined(OV50E40_MIPI_RAW)
+		{
+			SENSOR_DRVNAME_OV50E40_MIPI_RAW,
+			{
+				{SensorMCLK, Vol_High, 0},
+				{RST, Vol_Low, 5},
+				{AVDD, Vol_2800, 5},
+				{DOVDD, Vol_1800, 5},
+				{PDN, Vol_High, 0},
+				{DVDD, Vol_1100, 2},
+				{AFVDD, Vol_2800, 3},
+				{RST, Vol_High, 5}
+			},
+		},
+#endif
+#if defined(OV08D10WIDE_MIPI_RAW)
+		{
+			SENSOR_DRVNAME_OV08D10WIDE_MIPI_RAW,
+			{
+				{RST, Vol_Low, 0},
+				{DOVDD, Vol_1800, 1},
+				{AVDD, Vol_2800, 1},
+				{DVDD, Vol_1200, 5},
+				{RST, Vol_High, 0},
+				{SensorMCLK, Vol_High, 8},
+			},
+		},
+#endif
+#if defined(OV50A40_MIPI_RAW)
+	{
+		SENSOR_DRVNAME_OV50A40_MIPI_RAW,
+		{
+			{SensorMCLK, Vol_High, 0},
+			{RST, Vol_Low, 5},
+			{AVDD, Vol_2800, 5},
+			{DOVDD, Vol_1800, 5},
+			{PDN, Vol_High, 0},
+			{DVDD, Vol_1100, 2},
+			{AFVDD, Vol_2800, 3},
+			{RST, Vol_High, 5}
+			},
+		},
+#endif
+#if defined(OV50A40TSP_MIPI_RAW)
+	{
+		SENSOR_DRVNAME_OV50A40TSP_MIPI_RAW,
+		{
+			{RST, Vol_Low, 5},
+			{AVDD, Vol_2800, 5},
+			{DOVDD, Vol_1800, 5},
+			{DVDD, Vol_1100, 2},
+			{AFVDD, Vol_2800, 3},
+			{SensorMCLK, Vol_High, 0},
+						{PDN, Vol_High, 0},
+			{RST, Vol_High, 5},
+		},
+	},
+#endif
+#if defined(OV16A1Q_MIPI_RAW)
+	{
+		SENSOR_DRVNAME_OV16A1Q_MIPI_RAW,
+		{
+			{RST, Vol_Low, 5},
+			{DOVDD, Vol_1800, 1},
+			{AVDD, Vol_2800, 1},
+			{DVDD, Vol_1200, 1},
+			{SensorMCLK, Vol_High, 5},
+			{RST, Vol_High, 5}
+		},
+	},
+#endif
+#if defined(GC08A3WIDE_MIPI_RAW)
+		{
+			SENSOR_DRVNAME_GC08A3WIDE_MIPI_RAW,
+			{
+				{SensorMCLK, Vol_High, 0},
+				{DOVDD, Vol_1800, 1},
+				{DVDD, Vol_1200, 1},
+				{AVDD, Vol_2800, 1},
+				{PDN, Vol_High, 0},
+				{RST, Vol_High, 5},
+			},
+		},
+#endif
+#if defined(GC02M1MACRO_MIPI_RAW)
+	{
+		SENSOR_DRVNAME_GC02M1MACRO_MIPI_RAW,
+		{
+			{PDN, Vol_Low, 1},
+			{DOVDD, Vol_1800, 0},
+			{AVDD, Vol_2800, 5},
+			{PDN, Vol_High, 2},
+			{SensorMCLK, Vol_High, 1}
+		},
+	},
+#endif
+// prize add by chenwenhui for camera end
 #if defined(HI1339_MIPI_RAW)
 		{
 			SENSOR_DRVNAME_HI1339_MIPI_RAW,

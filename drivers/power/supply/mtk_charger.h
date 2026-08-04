@@ -13,6 +13,13 @@
 #include <linux/power_supply.h>
 #include "mtk_smartcharging.h"
 
+// drv add by tankaikun, add for screen on charging 20230108 start
+#if IS_ENABLED(CONFIG_DRM_MEDIATEK)
+#include "../../gpu/drm/mediatek/mediatek_v2/mtk_panel_ext.h"
+#include "../../gpu/drm/mediatek/mediatek_v2/mtk_disp_notify.h"
+#endif
+// drv add by tankaikun, add for screen on charging 20230108 end
+
 #define CHARGING_INTERVAL 10
 #define CHARGING_FULL_INTERVAL 20
 
@@ -98,6 +105,16 @@ struct charger_data;
 
 #define USB_CURRENT_MASK 0x80000000
 #define UNLIMIT_CURRENT_MASK 0x10000000
+// drv add tankaikun, add battery temp debug, 20231212 start
+#define MTK_DEBUG_TEMP_EN_CMD		0xb5b
+#define MTK_DEBUG_TEMP_DIS_CMD		0x5b5
+// drv add tankaikun, battery temp debug, 20231212 end
+
+// drv add by tankaikun, add for screen on charging 20230108 start
+#if IS_ENABLED(CONFIG_DRM_MEDIATEK)
+extern bool g_charge_is_screen_on;
+#endif
+// drv add by tankaikun, add for screen on charging 20230108 end
 
 enum bat_temp_state_enum {
 	BAT_TEMP_LOW = 0,
@@ -280,6 +297,57 @@ struct charger_data {
 	int junction_temp_max;
 };
 
+// drv add tankaikun, add facoryt charger class, 20231204 start
+enum mtk_charge_type {
+	MTK_CHARGER_TYPE_UNKNOWN,
+	MTK_CHARGER_TYPE_SDP,
+	MTK_CHARGER_TYPE_CDP,
+	MTK_CHARGER_TYPE_DCP,
+	MTK_CHARGER_TYPE_WL_BPP,
+	MTK_CHARGER_TYPE_WL_EPP,
+};
+
+enum mtk_fast_charge_type {
+	MTK_FAST_CHARGER_TYPE_UNKNOWN = 0,
+	MTK_FAST_CHARGER_TYPE_PEP,
+	MTK_FAST_CHARGER_TYPE_PE20,
+	MTK_FAST_CHARGER_TYPE_PDC,
+	MTK_FAST_CHARGER_TYPE_PE40,
+	MTK_FAST_CHARGER_TYPE_PE50,
+	MTK_FAST_CHARGER_TYPE_HVBP,
+	MTK_FAST_CHARGER_TYPE_PE5P,
+	MTK_FAST_CHARGER_TYPE_WIRELESS_FAST,
+	MTK_FAST_CHARGER_TYPE_MAX,
+};
+
+struct mtk_fast_chg_type_map {
+	int fast_chg_type;
+	int fast_chrg_id;
+};
+
+static const char * const mtk_chg_type_name_list[] = {
+	[MTK_CHARGER_TYPE_UNKNOWN] = "Unknown",
+	[MTK_CHARGER_TYPE_SDP] = "USB_SDP",
+	[MTK_CHARGER_TYPE_CDP] = "USB_CDP",
+	[MTK_CHARGER_TYPE_DCP] = "USB_DCP",
+	[MTK_CHARGER_TYPE_WL_BPP] = "WIRELESS_BPP",
+	[MTK_CHARGER_TYPE_WL_EPP] = "WIRELESS_EPP",
+};
+
+static const char * const mtk_fast_chg_algo_list[] = {
+	[MTK_FAST_CHARGER_TYPE_UNKNOWN] = "Unknown",
+	[MTK_FAST_CHARGER_TYPE_PEP] = "PE+",
+	[MTK_FAST_CHARGER_TYPE_PE20] = "PE20",
+	[MTK_FAST_CHARGER_TYPE_PDC] = "PDC",
+	[MTK_FAST_CHARGER_TYPE_PE40] = "PE40",
+	[MTK_FAST_CHARGER_TYPE_PE50] = "PE50",
+	[MTK_FAST_CHARGER_TYPE_HVBP] = "HVBP",
+	[MTK_FAST_CHARGER_TYPE_PE5P] = "PE5P",
+	[MTK_FAST_CHARGER_TYPE_WIRELESS_FAST] = "WIRELESS_FAST_CHARGER",
+	[MTK_FAST_CHARGER_TYPE_MAX] = "ERROR",
+};
+// drv add tankaikun, add facoryt charger class, 20231204 start
+
 enum chg_data_idx_enum {
 	CHG1_SETTING,
 	CHG2_SETTING,
@@ -289,6 +357,51 @@ enum chg_data_idx_enum {
 	HVDVCHG2_SETTING,
 	CHGS_SETTING_MAX,
 };
+
+// drv add tankaikun, add step charging, 20231130 start
+#define MAX_NUM_STEPS 10
+
+enum cs_chrg_steps {
+	STEP_FIRST = 0,
+	STEP_LAST = MAX_NUM_STEPS + STEP_FIRST - 1,
+	STEP_NONE = 0xFF,
+};
+
+enum cs_chrg_temp_zones {
+	ZONE_FIRST = 0,
+	/* states 0-9 are reserved for zones */
+	ZONE_LAST = MAX_NUM_STEPS + ZONE_FIRST - 1,
+	ZONE_HOT,
+	ZONE_COLD,
+	ZONE_NONE = 0xFF,
+};
+
+struct cs_chrg_step_power {
+	u32 chrg_step_volt;
+	u32 chrg_step_curr;
+};
+
+struct cs_chrg_temp_zone {
+	int	temp_c;	/*temperature*/
+	struct	cs_chrg_step_power *chrg_step_power;
+};
+
+struct cs_chrg_step_info {
+	enum cs_chrg_steps	pres_chrg_step;
+	int	temp_c;
+	int	chrg_step_cc_curr;
+	int	chrg_step_cv_volt;
+	int	chrg_step_cv_tapper_curr;
+	bool	last_step;
+};
+
+struct cs_chrg_ffc_zone {
+	int	temp_c;	/*temperature*/
+	int ffc_max_mv;
+	int ffc_chg_iterm;
+};
+
+// drv add tankaikun, add step charging, 20231130 end
 
 struct mtk_charger {
 	struct platform_device *pdev;
@@ -478,6 +591,39 @@ struct mtk_charger {
 
 	/*charger IC charging status*/
 	bool is_charging;
+
+	// drv add tankaikun, add step charging, 20231130 start
+	/* battery jeita control */
+	int num_temp_zones;
+	struct cs_chrg_temp_zone *temp_zones;
+	enum cs_chrg_temp_zones	pres_temp_zone;
+	int	chrg_step_nums;
+	struct cs_chrg_step_info chrg_step;
+	bool temp_zone_change;
+	bool chrg_step_change;
+
+	/* ffc charging control */
+	int num_ffc_zones;
+	struct cs_chrg_ffc_zone *ffc_zones;
+	int chrg_iterm;
+	// drv add tankaikun, add step charging, 20231130 end
+	// drv add tanakikun, add facoryt charger class, 20231204
+	int	fast_charge_support;
+
+	//  drv add tankaikun, add battery temp debug, 20231220 start
+	bool debug_temp_en;
+	int debug_temp;
+	// drv add tankaikun, add battery temp debug, 20231220 end
+
+// drv add by tankaikun, add for screen on charging 20230108 start
+#if IS_ENABLED(CONFIG_DRM_MEDIATEK)
+	struct notifier_block disp_notifier;
+#endif
+// drv add by tankaikun, add for screen on charging 20230108 end
+
+// drv add by tankaikun, add for fast power show, 20240218 start
+	unsigned int max_pwr;
+// drv add by tankaikun, add for fast power show, 20240218 end
 	bool is_cs_chg_done;
 
 	ktime_t uevent_time_check;
@@ -495,6 +641,10 @@ struct mtk_charger {
 	int protocol_state;
 	int ta_capability;
 	int wait_times;
+
+	bool fast_charging_status;
+
+	bool user_fast_charge_enabled;
 };
 
 static inline int mtk_chg_alg_notify_call(struct mtk_charger *info,

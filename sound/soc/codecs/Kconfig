@@ -14,6 +14,12 @@ config DEVICE_MODULES_SND_SOC_ALL_CODECS
 	imply DEVICE_MODULES_SND_SOC_HDMI_CODEC
 	imply SND_SOC_RT5512
 	imply SND_SOC_TFA9874
+	#drv add by pzp, support aw883xx, start
+	imply SND_SOC_AW883XX
+	#drv add by pzp, support aw883xx, end
+	#drv added by pengzhipeng, FSA4480, 20221103-start
+	imply SND_SOC_FSA4480_SWITCH
+	#drv added by pengzhipeng, FSA4480, 20221103-end
         imply SND_SOC_RT5509
         imply SND_SOC_FS16XX
 	help
@@ -32,6 +38,20 @@ config DEVICE_MODULES_SND_SOC_HDMI_CODEC
 	select SND_PCM_ELD
 	select SND_PCM_IEC958
 	select HDMI
+#drv add by pzp, support aw883xx, start
+config SND_SOC_AW883XX
+	tristate "SoC Audio for awinic aw883xx series"
+	depends on I2C
+	help
+	  This option enables support for aw883xx series Smart PA.
+#drv add by pzp, support aw883xx, end
+
+#drv added by pengzhipeng, FSA4480, 20221103-start
+config SND_SOC_FSA4480_SWITCH
+	tristate "SoC Audio for awinic FSA4480 series"
+	help
+        This option enables support for FSA4480.
+#drv added by pengzhipeng, FSA4480, 20221103-end
 
 config SND_SOC_RT5509
 	tristate "Richtek RT5509 speaker amplifier"
@@ -59,6 +79,15 @@ config SND_SOC_FS16XX
 	  Config of FS18xx . It is a Smart power amplifier which contain speaker protection,
 	  multi-band DRC, equalizer function. It would be set to yes if device with FS18xx on it.
 	  Select this if your FS16xx is connected via an I2S bus.
+
+config SND_SOC_AW883XX
+	tristate "SoC Audio for awinic AW883XX Smart K PA"
+	depends on I2C
+	help
+	  Config of AW883XX. It is a Smart power amplifier which contain speaker protection.
+	  This option enables support for AW883XX Smart K PA.
+	  It would be set to yes if device with AW883XX on it.
+	  Select this if your AW883XX is connected via an I2S bus.
 
 config SND_SOC_TFA9874
 	tristate "NXP TFA9874 speaker amplifier"
@@ -208,4 +237,12 @@ config SND_SOC_HFDA80X
 	help
 	  Config of hfda80x. It is a Smart amplifier
 	  It would be set to yes if device with HFDA801/HFDA803 on it.
+
+config SND_SOC_RT9123
+	tristate "Richtek RT9123 speaker amplifier"
+	depends on I2C
+	help
+	  Config of RT9123. It is a Smart amplifier
+	  It would be set to yes if device with RT9123 on it.
+	  Select N if you don't have RT9123 on board.
 endmenu

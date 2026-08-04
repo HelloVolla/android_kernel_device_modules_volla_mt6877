@@ -21,6 +21,11 @@
 #include <linux/log2.h>
 
 #include "hf_manager.h"
+//prize add by lipengpeng 20220719 start 
+#if IS_ENABLED(CONFIG_PRIZE_HARDWARE_INFO)
+#include "../../../prize/hardware_info/hardware_info.h"
+#endif
+//prize add by lipengpeng 20220719 end 
 
 struct coordinate {
 	int8_t sign[3];
@@ -358,6 +363,61 @@ int hf_manager_create(struct hf_device *device)
 			err = -EBUSY;
 			goto out_err;
 		}
+//prize add by lipengpeng 20220719 start 
+#if IS_ENABLED(CONFIG_PRIZE_HARDWARE_INFO)
+	//	 printk("lpp---sensor_type=%d,i = %d\n",sensor_type,i);
+		 
+	//	 pr_err("gezi name=%s ,vendor=%s\n",device->support_list[i].name,device->support_list[i].vendor);
+		 
+		 if(sensor_type == SENSOR_TYPE_ACCELEROMETER)
+		 {
+		   strcpy(current_gsensor_info.chip, device->support_list[i].name);
+		   strcpy(current_gsensor_info.vendor, device->support_list[i].vendor);
+		  //strcpy(current_gsensor_info.id, device->support_list[i].id);
+		   strcpy(current_gsensor_info.more, "gsensor");
+		 }
+		 else if(sensor_type == SENSOR_TYPE_LIGHT)
+		 {
+		   strcpy(current_alsps_info.chip, device->support_list[i].name);
+		   strcpy(current_alsps_info.vendor, device->support_list[i].vendor);
+		   //strlcpy(current_alsps_info.id, device->support_list[i].id);
+		   strcpy(current_alsps_info.more, "alsps");	 
+		 }
+		 else if(sensor_type == SENSOR_TYPE_MAGNETIC_FIELD)
+		 {
+		   strcpy(current_msensor_info.chip, device->support_list[i].name);
+		   strcpy(current_msensor_info.vendor, device->support_list[i].vendor);
+		  // strlcpy(current_msensor_info.id, device->support_list[i].id);
+		   strcpy(current_msensor_info.more, "msensor");
+		 }
+		 else if(sensor_type == SENSOR_TYPE_GYROSCOPE)
+		 {
+		   strcpy(current_gyroscope_info.chip, device->support_list[i].name);
+		   strcpy(current_gyroscope_info.vendor, device->support_list[i].vendor);
+		  // strlcpy(current_gyroscope_info.id, device->support_list[i].id);
+		   strcpy(current_gyroscope_info.more, "gyroscope");
+		 }
+		 else if(sensor_type == SENSOR_TYPE_PRESSURE)
+		 {
+		   strcpy(current_barosensor_info.chip, device->support_list[i].name);
+		   strcpy(current_barosensor_info.vendor, device->support_list[i].vendor);
+		  // strlcpy(current_barosensor_info.id, device->support_list[i].id);
+		   strcpy(current_barosensor_info.more, "barometer");
+		 }
+		 else if(sensor_type == SENSOR_TYPE_SAR)
+		 {
+		   strcpy(current_sarsensor_info.chip, device->support_list[i].name);
+		   strcpy(current_sarsensor_info.vendor, device->support_list[i].vendor);
+		  // strlcpy(current_sarsensor_info.id, device->support_list[i].id);
+		   strcpy(current_sarsensor_info.more, "sar");
+		 }
+		 else{
+			 printk("other sensor\n");
+			 
+		 }
+		#endif	 	 					
+//prize add by lipengpeng 20220719 end
+		
 	}
 
 	INIT_LIST_HEAD(&manager->list);

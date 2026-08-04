@@ -67,6 +67,9 @@
 #define AFDRV_WV511AAF "WV511AAF"
 #define AFDRV_DW9718TAF "DW9718TAF"
 #define AFDRV_GT9772AF "GT9772AF"
+/*prize add by xiaguohong 20240912 start*/
+#define AFDRV_PD9402A "PD9402A"
+/*prize add by xiaguohong 20240912 end*/
 #define AFDRV_GT9768AF "GT9768AF"
 
 #define CONVERT_CCU_TIMESTAMP 0x1000

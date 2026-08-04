@@ -209,15 +209,29 @@ static int pd_tcp_notifier_call(struct notifier_block *nb,
 					TYPEC_ACCESSORY_NONE;
 				break;
 			}
-			rpmd->partner[idx] = typec_register_partner(
-						rpmd->typec_port[idx],
+			
+			/* drv x9 v headset compatible modify by  20240509 begin */
+			/* modified for suppressing the following system notification
+			* when analog type-C headset inserted start:
+			* Analog audio accessory detected: The attached device is not
+			* compatible with this phone. */
+
+			if (likely(new_state != TYPEC_ATTACHED_AUDIO)) {
+				rpmd->partner[idx] = typec_register_partner(rpmd->typec_port[idx],
 						&rpmd->partner_desc[idx]);
-			if (IS_ERR(rpmd->partner[idx])) {
-				ret = PTR_ERR(rpmd->partner[idx]);
-				dev_notice(rpmd->dev,
-				"%s typec register partner fail(%d)\n",
-					   __func__, ret);
+				if (IS_ERR(rpmd->partner[idx])) {
+					ret = PTR_ERR(rpmd->partner[idx]);
+					dev_notice(rpmd->dev,
+					"%s typec register partner fail(%d)\n",
+						   __func__, ret);
+				}
 			}
+			else {
+				dev_notice(rpmd->dev,
+					"%s USB audio accessory attach, skip registering tcpc partner\n",
+					__func__);
+			}
+			/* drv x9 v  headset compatible modify by  20240509 end */
 		}
 		break;
 	case TCP_NOTIFY_PR_SWAP:

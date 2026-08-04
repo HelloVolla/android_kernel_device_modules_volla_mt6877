@@ -760,6 +760,10 @@ struct mtk_panel_funcs {
 	void (*lcm_valid_roi)(struct mtk_panel_params *ext_param,
 		unsigned int *x, unsigned int *y, unsigned int *w, unsigned int *h);
 	int (*get_lcm_power_state)(struct drm_panel *panel);
+
+	int (*hbm_fp_set_cmdq)(struct drm_panel *panel, void *dsi_drv,
+		dcs_write_gce cb, void *handle, bool en);
+	void (*hbm_fp_get_state)(struct drm_panel *panel, bool *wait);
 };
 
 void mtk_panel_init(struct mtk_panel_ctx *ctx);

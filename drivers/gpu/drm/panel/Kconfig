@@ -590,6 +590,28 @@ config DRM_PANEL_RM692H5_CMD
 	  resolution and uses 24-bits RGB per pixel. It provides a
 	  MIPI DSI interface to host.
 
+config DRM_PANEL_ML_VTDR6126_VDO
+	tristate "ml vtdr6126 fhdp video panel"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	help
+	  Say Y here if you want to enable support for Viewtrix vtdr6126
+	  fhdp video panel. The panel has a 1080x2400 resolution
+	  and uses 24-bits RGB per pixel. It provides a MIPI DSI
+	  interface to host.
+	  
+config DRM_PANEL_BOE_RM692E5_CMD
+	tristate "boe rm692e5 fhdp cmd panel"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	help
+	  Say Y here if you want to enable support for Raydium rm692e5
+	  fhdp cmd panel. The panel has a 1080x2400 resolution
+	  and uses 24-bits RGB per pixel. It provides a MIPI DSI
+	  interface to host.
+
 config DRM_PANEL_RM692H5_ALPHA_CMD_SPR
 	tristate "mt6991 rm692h5 alpha cmd spr panel"
 	depends on OF
@@ -747,6 +769,17 @@ config DRM_PANEL_NT37707_C2V_ARP
 	  and uses 24-bits RGB per pixel. It provides a MIPI DSI
 	  interface to host. It support ARP_TE.
 
+config DRM_PANEL_JD9635DA_GQ31093GQ
+	tristate "JD9635DA GQ31093GQ wxga vdo mode panel"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	help
+		Say Y here if you want to enable support for jd9635da
+		wxga vdo mode panel. The panel has a 800x1280 resolution
+		and uses 24-bits RGB per pixel. It provides a
+		MIPI DSI interface to host.
+
 config DRM_PANEL_NT37707_BOE_FHDPLUS_CMD
 	tristate "mt6991 nt37707 boe fhdplus cmd panel"
 	depends on OF
@@ -834,3 +867,14 @@ config DRM_PANEL_N11A_42_02_0A_DSC_VDO
 	  n11a 42 02 0a panel with DSC and VDO mode. The panel has a
 	  1220x2772 resolution and uses 24-bits RGB per pixel.
 	  It provides a MIPI DSI interface to host.
+
+config DRM_PANEL_NT37706A_BOE_FHDPLUS_VDO
+	tristate "mt6991 nt37706a boe fhdplus vdo panel"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	help
+	  Say Y here if you want to enable support for mt6991
+	  nt37706a boe fhdplus vdo panel. The panel has a 1280x2800
+	  resolution and uses 30-bits RGB per pixel. It provides a
+	  MIPI DSI interface to host.

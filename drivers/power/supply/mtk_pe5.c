@@ -2286,7 +2286,23 @@ static int pe50_algo_ss_dvchg_with_ta_cv(struct pe50_algo_info *info)
 		.hardreset_ta = false,
 	};
 
+// drv add tankaikun, add step charging, 20231130 start
+#if IS_ENABLED(CONFIG_CHARGER_STEP_CHARGE)
+	int ibat;
+#endif
+// drv add tankaikun, add step charging, 20231130 end
 	PE50_DBG("++\n");
+// drv add tankaikun, add step charging, 20231130 start
+#if IS_ENABLED(CONFIG_CHARGER_STEP_CHARGE)
+	ret = pe50_get_adc(info, PE50_ADCCHAN_IBAT, &ibat);
+	if (ret < 0) {
+		PE50_ERR("get ibat fail(%d)\n", ret);
+		goto out;
+	}
+	PE50_DBG("ibat(meas,lmt)=(%d,%d)\n", ibat, data->current_limit);
+#endif
+// drv add tankaikun, add step charging, 20231130 end
+
 	ita_gap_per_vstep = data->ita_gap_per_vstep > 0 ?
 			    data->ita_gap_per_vstep :
 			    auth_data->ita_gap_per_vstep;
@@ -2383,6 +2399,13 @@ single_dvchg_select_ita:
 	if (data->ita_measure + ita_gap_per_vstep > idvchg_lmt ||
 	    vta == auth_data->vcap_max)
 		data->state = PE50_ALGO_CC_CV;
+// drv mod tankaikun, add step charging, 20231130 start
+#if IS_ENABLED(CONFIG_CHARGER_STEP_CHARGE)
+	else if (ibat > data->current_limit) {
+		data->state = PE50_ALGO_CC_CV;
+	}
+#endif /* CONFIG_CHARGER_STEP_CHARGE */
+// drv mod tankaikun, add step charging, 20231130 end
 	else {
 		vstep_cnt = precise_div(idvchg_lmt - data->ita_measure,
 					3 * ita_gap_per_vstep);
@@ -2623,6 +2646,10 @@ static int pe50_algo_cc_cv_with_ta_cv(struct pe50_algo_info *info)
 				data->ita_gap_per_vstep :
 				auth_data->ita_gap_per_vstep;
 	u32 vta_measure, ita_measure, suspect_ta_cc = false;
+// drv add tankaikun, add step charging, 20231130 start
+	int ibat;
+// drv add tankaikun, add step charging, 20231130 end
+
 	struct pe50_stop_info sinfo = {
 		.reset_ta = true,
 		.hardreset_ta = false,
@@ -2637,6 +2664,14 @@ static int pe50_algo_cc_cv_with_ta_cv(struct pe50_algo_info *info)
 		sinfo.hardreset_ta = auth_data->support_meas_cap;
 		goto out;
 	}
+
+// drv add tankaikun, add step charging, 20231130 start
+	ret = pe50_get_adc(info, PE50_ADCCHAN_IBAT, &ibat);
+	if (ret < 0) {
+		PE50_ERR("get ibat fail(%d)\n", ret);
+		goto out;
+	}
+// drv add tankaikun, add step charging, 20231130 end
 	if (data->ita_measure < data->idvchg_term &&
 	    data->is_dvchg_en[PE50_DVCHG_SLAVE]) {
 		ret = pe50_check_slave_dvchg_off(info);
@@ -2668,6 +2703,17 @@ static int pe50_algo_cc_cv_with_ta_cv(struct pe50_algo_info *info)
 		goto out;
 	}
 
+// drv add tankaikun, add step charging, 20231130 start
+#if IS_ENABLED(CONFIG_CHARGER_STEP_CHARGE)
+	PE50_INFO("ita(meas,lmt)=(%d,%d), ibat(meas,lmt)=(%d,%d) vbat(meas,lmt)=(%d,%d)\n",
+				data->ita_measure, idvchg_lmt,
+				ibat, data->current_limit,
+				vbat, data->vbat_cv);
+	PE50_INFO("ita_gap_per_vstep=%d cv_lower_bound=%d vcap_max=%d\n",
+				ita_gap_per_vstep, data->cv_lower_bound, auth_data->vcap_max);
+#endif /* CONFIG_CHARGER_STEP_CHARGE */
+// drv add tankaikun, add step charging, 20231130 end
+
 	if (vbat >= data->vbat_cv) {
 		PE50_INFO("--vbat >= vbat_cv, %d > %d\n", vbat, data->vbat_cv);
 		vta -= auth_data->vta_step;
@@ -2679,9 +2725,21 @@ static int pe50_algo_cc_cv_with_ta_cv(struct pe50_algo_info *info)
 		ita -= ita_gap_per_vstep;
 		PE50_INFO("--vta, ita(meas,lmt)=(%d,%d)\n", data->ita_measure,
 			  idvchg_lmt);
+// drv mod tankaikun, add step charging, 20231130 start
+#if IS_ENABLED(CONFIG_CHARGER_STEP_CHARGE)
+	} else if (ibat > data->current_limit) {
+		vta -= auth_data->vta_step;
+		ita -= ita_gap_per_vstep;
+		ita = max(ita, idvchg_lmt);
+		PE50_INFO("--ibat(meas,lmt)=(%d,%d)\n", ibat, data->current_limit);
+#endif /* CONFIG_CHARGER_STEP_CHARGE */
 	} else if (!data->is_vbat_over_cv && vbat <= data->cv_lower_bound &&
 		   data->ita_measure <= (idvchg_lmt - ita_gap_per_vstep) &&
 		   vta < auth_data->vcap_max && !data->suspect_ta_cc &&
+#if IS_ENABLED(CONFIG_CHARGER_STEP_CHARGE)
+		   ibat <= (data->current_limit - ita_gap_per_vstep) &&
+#endif /* CONFIG_CHARGER_STEP_CHARGE */
+// drv mod tankaikun, add step charging, 20231130 end
 		   vsys < (PE50_VSYS_UPPER_BOUND - PE50_VSYS_UPPER_BOUND_GAP)) {
 		vta += auth_data->vta_step;
 		vta = min(vta, (u32)auth_data->vcap_max);
@@ -3692,6 +3750,12 @@ static int pe50_is_algo_ready(struct chg_alg_device *alg)
 	struct pe50_algo_desc *desc = info->desc;
 	struct pe50_ta_auth_data *auth_data = &data->ta_auth_data;
 
+// drv mod tankaikun, add step charging, 20231130 start
+#if IS_ENABLED(CONFIG_CHARGER_STEP_CHARGE)
+	int idvchg_term=0;
+#endif /* CONFIG_CHARGER_STEP_CHARGE */
+// drv mod tankaikun, add step charging, 20231130 end
+
 	if (algo_waiver_test)
 		return ALG_WAIVER;
 
@@ -3739,6 +3803,16 @@ static int pe50_is_algo_ready(struct chg_alg_device *alg)
 		ret = ALG_NOT_READY;
 		goto out;
 	}
+// drv mod tankaikun, add step charging, 20231130 start
+#if IS_ENABLED(CONFIG_CHARGER_STEP_CHARGE)
+	idvchg_term = percent(data->idvchg_term, PE50_DVCHG_STARTUP_CONVERT_RATIO);
+	if (idvchg_term > data->current_limit ) {
+		PE50_INFO("current_limit(%d) lower than idvchg_term(%d)\n", data->current_limit, idvchg_term);
+		ret = ALG_WAIVER;
+		goto out;
+	}
+#endif /* CONFIG_CHARGER_STEP_CHARGE */
+// drv mod tankaikun, add step charging, 20231130 end
 
 	if (!pe50_is_ta_rdy(info)) {
 		ret = pe50_hal_is_adapter_ready(alg);
@@ -3857,24 +3931,36 @@ out:
 	return ret;
 }
 
+// drv mod tankaikun, add step charging, 20231130 start
 static int pe50_set_current_limit(struct chg_alg_device *alg,
 				  struct chg_limit_setting *setting)
 {
 	struct pe50_algo_info *info = chg_alg_dev_get_drvdata(alg);
 	struct pe50_algo_data *data = info->data;
-	int cv = micro_to_milli(setting->cv);
 	int ic = micro_to_milli(setting->input_current_limit_dvchg1);
+#if IS_ENABLED(CONFIG_CHARGER_STEP_CHARGE)
+	int cv = micro_to_milli(setting->step_cv);
+	int ibat = micro_to_milli(setting->charging_current_cv_tapper);
+#endif /* (CONFIG_CHARGER_STEP_CHARGE) */
 
 	mutex_lock(&data->ext_lock);
-	if (data->cv_limit != cv || data->input_current_limit != ic) {
-		data->cv_limit = cv;
+#if IS_ENABLED(CONFIG_CHARGER_STEP_CHARGE)
+	if (data->cv_limit != cv || data->input_current_limit != ic || ibat != data->current_limit) {
+#else
+	if (data->input_current_limit != ic) {
+#endif /* CONFIG_CHARGER_STEP_CHARGE */
 		data->input_current_limit = ic;
-		PE50_INFO("ic = %d, cv = %d\n", ic, cv);
+#if IS_ENABLED(CONFIG_CHARGER_STEP_CHARGE)
+		data->cv_limit = cv;
+		data->current_limit = ibat;
+		PE50_INFO("ic = %d, cv = %d ichg = %d \n", ic, cv, ibat);
+#endif /* CONFIG_CHARGER_STEP_CHARGE */
 		pe50_wakeup_algo_thread(data);
 	}
 	mutex_unlock(&data->ext_lock);
 	return 0;
 }
+// drv mod tankaikun, add step charging, 20231130 end
 
 static int pe50_get_prop(struct chg_alg_device *alg,
 			 enum chg_alg_props s, int *value)

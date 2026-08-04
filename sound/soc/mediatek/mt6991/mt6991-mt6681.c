@@ -22,6 +22,14 @@
 #include "../../codecs/mt6681-accdet.h"
 #endif
 
+#if IS_ENABLED(CONFIG_SND_SOC_MTK_AUTO_AUDIO) && IS_ENABLED(CONFIG_SND_SOC_RT9123)
+#include "mt6991-machine.h"
+#endif
+
+#if IS_ENABLED(CONFIG_MTK_BATTERY_PERCENT_THROTTLING)
+#include "mtk_bp_thl.h"
+#endif
+
 /*
  * if need additional control for the ext spk amp that is connected
  * after Lineout Buffer / HP Buffer on the codec, put the control in
@@ -78,6 +86,83 @@ static const struct soc_enum mt6991_spk_type_enum[] = {
 			    mt6991_spk_i2s_type_str),
 };
 
+#if IS_ENABLED(CONFIG_MTK_BATTERY_PERCENT_THROTTLING)
+static unsigned int volume_throttle[BATTERY_PERCENT_LEVEL_NUM];
+static unsigned int last_level;
+
+static void update_volume_throttle(const char *volume_name_l,
+				   const char *volume_name_r,
+				   int old_level, int new_level)
+{
+	struct snd_soc_card *card = &mt6991_mt6681_soc_card;
+	struct snd_kcontrol *kcontrol;
+	struct snd_soc_component *component;
+	struct snd_ctl_elem_value ucontrol;
+	int ret;
+	int diff = volume_throttle[new_level] - volume_throttle[old_level];
+
+	// Left amp
+	kcontrol = snd_soc_card_get_kcontrol(card, volume_name_l);
+	if (!kcontrol) {
+		dev_info(card->dev, "Cannot find kcontrol %s\n", volume_name_l);
+		return;
+	}
+	component = snd_soc_kcontrol_component(kcontrol);
+	if (!component) {
+		dev_info(card->dev, "Cannot find component for kcontrol %s\n", volume_name_l);
+		return;
+	}
+	memset(&ucontrol, 0, sizeof(ucontrol));
+
+	ret = kcontrol->get(kcontrol, &ucontrol);
+	dev_info(component->dev, "Current volume: %ld, throttle level: %d->%d, diff=%d\n",
+					ucontrol.value.integer.value[0], old_level, new_level, diff);
+	if (diff) {
+		ucontrol.value.integer.value[0] += volume_throttle[old_level];
+		ret = kcontrol->put(kcontrol, &ucontrol);
+		dev_info(component->dev, "New volume: %ld, ret=%d\n", ucontrol.value.integer.value[0], ret);
+	}
+
+	// Right amp
+	kcontrol = snd_soc_card_get_kcontrol(card, volume_name_r);
+	if (!kcontrol) {
+		dev_info(card->dev, "Cannot find kcontrol %s\n", volume_name_r);
+		return;
+	}
+	component = snd_soc_kcontrol_component(kcontrol);
+	if (!component) {
+		dev_info(card->dev, "Cannot find component for kcontrol %s\n", volume_name_r);
+		return;
+	}
+	memset(&ucontrol, 0, sizeof(ucontrol));
+
+	ret = kcontrol->get(kcontrol, &ucontrol);
+	dev_info(component->dev, "Current volume: %ld, throttle level: %d->%d, diff=%d\n",
+					ucontrol.value.integer.value[0], old_level, new_level, diff);
+	if (diff) {
+		ucontrol.value.integer.value[0] += volume_throttle[old_level];
+		ret = kcontrol->put(kcontrol, &ucontrol);
+		dev_info(component->dev, "New volume: %ld, ret=%d\n", ucontrol.value.integer.value[0], ret);
+	}
+}
+
+static void audio_pt_battery_percent_cb(enum BATTERY_PERCENT_LEVEL_TAG level)
+{
+	if (level >= BATTERY_PERCENT_LEVEL_NUM) {
+		// invalid
+		return;
+	}
+
+	// throttle by level
+	mtk_spk_set_reduceDb(volume_throttle[level]);
+
+#if IS_ENABLED(CONFIG_SND_SOC_RT5512)
+	update_volume_throttle("Left Volume_Ctrl", "Right Volume_Ctrl", last_level , level);
+#endif
+	last_level = level;
+}
+#endif
+
 static int mt6991_spk_type_get(struct snd_kcontrol *kcontrol,
 			       struct snd_ctl_elem_value *ucontrol)
 {
@@ -119,6 +204,25 @@ static int mt6991_compress_info_set(struct snd_kcontrol *kcontrol,
 			__func__, data, size);
 		return -EFAULT;
 	}
+	return 0;
+}
+
+
+static int mt6991_ipm_info_get(struct snd_kcontrol *kcontrol,
+			       struct snd_ctl_elem_value *ucontrol)
+{
+	unsigned int ipm_info = 0;
+	int ret = 0;
+	struct snd_soc_card *card = &mt6991_mt6681_soc_card;
+
+	ret = of_property_read_u32(card->dev->of_node, "mediatek,ipm", &ipm_info);
+	if (ret) {
+		dev_info(card->dev,
+			 "%s(), get mediatek,ipm fail, use defalut 0\n", __func__);
+		ipm_info = 0;
+	}
+	pr_debug("%s() = %u\n", __func__, ipm_info);
+	ucontrol->value.integer.value[0] = ipm_info;
 	return 0;
 }
 
@@ -224,6 +328,9 @@ static const struct snd_soc_dapm_route mt6991_mt6681_routes[] = {
 	{EXT_SPK_AMP_W_NAME, NULL, "Headphone R Ext Spk Amp"},
 };
 static const struct snd_soc_dapm_route mt6991_mt6681_routes_dummy[] = {};
+#if IS_ENABLED(CONFIG_SND_SOC_MTK_AUTO_AUDIO) && IS_ENABLED(CONFIG_SND_SOC_RT9123)
+static const struct snd_soc_dapm_route mt6991_external_codec_routes_dummy[] = {};
+#endif
 
 static const struct snd_kcontrol_new mt6991_mt6681_controls[] = {
 	SOC_DAPM_PIN_SWITCH(EXT_SPK_AMP_W_NAME),
@@ -233,6 +340,9 @@ static const struct snd_kcontrol_new mt6991_mt6681_controls[] = {
 		     mt6991_spk_i2s_out_type_get, NULL),
 	SOC_ENUM_EXT("MTK_SPK_I2S_IN_TYPE_GET", mt6991_spk_type_enum[1],
 		     mt6991_spk_i2s_in_type_get, NULL),
+	SOC_SINGLE_EXT("MTK_IPM_INFO_GET", SND_SOC_NOPM, 0, 0x1, 0,
+		       mt6991_ipm_info_get,
+		       NULL),
 	SND_SOC_BYTES_TLV("MTK_COMPRESS_INFO",
 			  sizeof(struct mt6991_compress_info),
 			  mt6991_compress_info_get, mt6991_compress_info_set),
@@ -835,10 +945,20 @@ SND_SOC_DAILINK_DEFS(i2sout3,
 	DAILINK_COMP_ARRAY(COMP_CPU("I2SOUT3")),
 	DAILINK_COMP_ARRAY(COMP_DUMMY()),
 	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+#if IS_ENABLED(CONFIG_SND_SOC_MTK_AUTO_AUDIO) && IS_ENABLED(CONFIG_SND_SOC_RT9123)
+SND_SOC_DAILINK_DEFS(i2sout4,
+	DAILINK_COMP_ARRAY(COMP_CPU("I2SOUT4")),
+	DAILINK_COMP_ARRAY(COMP_CODEC(DEVICE_EXTERNAL_CODEC_NAME_1,
+				     DAI_EXTERNAL_CODEC_NAME),
+			   COMP_CODEC(DEVICE_EXTERNAL_CODEC_NAME_2,
+				     DAI_EXTERNAL_CODEC_NAME)),
+	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+#else
 SND_SOC_DAILINK_DEFS(i2sout4,
 	DAILINK_COMP_ARRAY(COMP_CPU("I2SOUT4")),
 	DAILINK_COMP_ARRAY(COMP_DUMMY()),
 	DAILINK_COMP_ARRAY(COMP_EMPTY()));
+#endif
 SND_SOC_DAILINK_DEFS(i2sout5,
 	DAILINK_COMP_ARRAY(COMP_CPU("I2SOUT5")),
 	DAILINK_COMP_ARRAY(COMP_DUMMY()),
@@ -2430,12 +2550,39 @@ static int mt6991_mt6681_bypass_primary_codec(struct platform_device *pdev)
 	return 0;
 }
 
+#if IS_ENABLED(CONFIG_SND_SOC_MTK_AUTO_AUDIO) && IS_ENABLED(CONFIG_SND_SOC_RT9123)
+static int mt6991_bypass_external_codec(struct platform_device *pdev)
+{
+	struct snd_soc_card *card = &mt6991_mt6681_soc_card;
+	int i, j;
+	struct snd_soc_dai_link *dai_link;
+	struct snd_soc_dai_link_component *codec;
+
+	for_each_card_prelinks(card, i, dai_link) {
+		if (strcmp(dai_link->name, "I2SOUT4") == 0) {
+			for_each_link_codecs(dai_link, j, codec) {
+				codec->name = "snd-soc-dummy";
+				codec->dai_name = "snd-soc-dummy-dai";
+				dev_info(&pdev->dev, "%s() I2SOUT4 modified\n", __func__);
+			}
+		}
+	}
+	card->dapm_routes = mt6991_external_codec_routes_dummy;
+	card->num_dapm_routes = ARRAY_SIZE(mt6991_external_codec_routes_dummy);
+	return 0;
+}
+#endif
+
 static int mt6991_mt6681_dev_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = &mt6991_mt6681_soc_card;
 	struct device_node *platform_node, *spk_node;
 	int ret, i;
 	struct snd_soc_dai_link *dai_link;
+#if IS_ENABLED(CONFIG_MTK_BATTERY_PERCENT_THROTTLING)
+	int is_register_bt_pt;
+	int ret_pt;
+#endif
 
 	dev_info(&pdev->dev, "%s() successfully start\n", __func__);
 
@@ -2493,6 +2640,13 @@ static int mt6991_mt6681_dev_probe(struct platform_device *pdev)
 		mt6991_mt6681_bypass_primary_codec(pdev);
 	}
 
+#if IS_ENABLED(CONFIG_SND_SOC_MTK_AUTO_AUDIO) && IS_ENABLED(CONFIG_SND_SOC_RT9123)
+	if (!external_codec_done) {
+		dev_info(&pdev->dev, "%s external codec probe fail, bypass codec driver\n", __func__);
+		mt6991_bypass_external_codec(pdev);
+	}
+#endif
+
 	card->dev = &pdev->dev;
 
 	ret = devm_snd_soc_register_card(&pdev->dev, card);
@@ -2502,6 +2656,26 @@ static int mt6991_mt6681_dev_probe(struct platform_device *pdev)
 	else
 		dev_info(&pdev->dev, "%s snd_soc_register_card pss %d\n",
 				__func__, ret);
+
+#if IS_ENABLED(CONFIG_MTK_BATTERY_PERCENT_THROTTLING)
+	/* get low battery power throttling is supported */
+	ret_pt = of_property_read_u32(pdev->dev.of_node, "register-battery-percent-pt", &is_register_bt_pt);
+	if (ret_pt) {
+		dev_info(&pdev->dev, "%s(), get register_bt_pt fail, use defalut 0\n", __func__);
+		is_register_bt_pt = 0;
+	}
+	if (is_register_bt_pt) {
+		last_level = 0;
+		for (i = 0; i < BATTERY_PERCENT_LEVEL_NUM; i++)
+			volume_throttle[i] = 0;
+
+		ret_pt = of_property_read_u32_array(pdev->dev.of_node, "volume-throttle",
+					(unsigned int *)&volume_throttle, BATTERY_PERCENT_LEVEL_NUM);
+
+		register_bp_thl_notify(&audio_pt_battery_percent_cb, BATTERY_PERCENT_PRIO_AUDIO);
+	}
+#endif
+
 	return ret;
 }
 

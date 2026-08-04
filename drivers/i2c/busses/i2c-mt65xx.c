@@ -353,6 +353,8 @@ struct mtk_i2c {
 	struct clk *clk_arb;		/* Arbitrator clock for i2c */
 	bool have_pmic;			/* can use i2c pins from PMIC */
 	bool use_push_pull;		/* IO config push-pull mode */
+	bool disable_clk_stretch;	/* Disable i2c clock stretch */
+	bool disable_speed_compensate;	/* Disable speed compensate when stretch */
 	bool wake_scp_check_en;
 	bool fifo_use_polling;
 
@@ -591,6 +593,21 @@ static const struct mtk_i2c_compatible mt6765_compat = {
 	.need_add_hhs_div = 0,
 };
 
+static const struct mtk_i2c_compatible mt6771_compat = {
+	.regs = mt_i2c_regs_v2,
+	.pmic_i2c = 0,
+	.dcm = 0,
+	.auto_restart = 1,
+	.aux_len_reg = 1,
+	.timing_adjust = 1,
+	.dma_sync = 1,
+	.ltiming_adjust = 1,
+	.dma_ver = 0,
+	.apdma_sync = 1,
+	.max_dma_support = 36,
+	.fifo_size = 8,
+};
+
 static const struct mtk_i2c_compatible mt6781_compat = {
 	.regs = mt_i2c_regs_v2,
 	.pmic_i2c = 0,
@@ -738,6 +755,7 @@ static const struct of_device_id mtk_i2c_of_match[] = {
 	{ .compatible = "mediatek,mt6781-i2c", .data = &mt6781_compat },
 	{ .compatible = "mediatek,mt6877-i2c", .data = &mt6877_compat },
 	{ .compatible = "mediatek,mt6765-i2c", .data = &mt6765_compat },
+	{ .compatible = "mediatek,mt6771-i2c", .data = &mt6771_compat },
 	{}
 };
 MODULE_DEVICE_TABLE(of, mtk_i2c_of_match);
@@ -1428,8 +1446,10 @@ static int mtk_i2c_set_speed_v2(struct mtk_i2c *i2c, unsigned int parent_clk)
 				(target_speed / I2C_MAX_STANDARD_MODE_FREQ * 1000000);
 			if (l_ext_time > MAX_LS_EXT_TIME)
 				continue;
-			target_speed = (target_speed / 100) *
-				(100 - 3 + target_speed / I2C_MAX_STANDARD_MODE_FREQ);
+			if (!i2c->disable_speed_compensate) {
+				target_speed = (target_speed / 100) *
+					(100 - 3 + target_speed / I2C_MAX_STANDARD_MODE_FREQ);
+			}
 			l_cal_para.max_step = MAX_STEP_CNT_DIV;
 			l_cal_para.best_mul = (parent_clk + clk_div * target_speed - 1) /
 				(clk_div * target_speed) + 1;
@@ -1856,7 +1876,7 @@ static int mtk_i2c_do_transfer(struct mtk_i2c *i2c, struct i2c_msg *msgs,
 			~(I2C_CONTROL_DIR_CHANGE | I2C_CONTROL_RS | I2C_CONTROL_DMA_EN |
 			I2C_CONTROL_DMAACK_EN | I2C_CONTROL_ASYNC_MODE);
 	if (i2c->dev_comp->speed_ver) {
-		if (i2c->speed_hz > I2C_MAX_FAST_MODE_PLUS_FREQ)
+		if (i2c->speed_hz > I2C_MAX_FAST_MODE_PLUS_FREQ || i2c->disable_clk_stretch)
 			control_reg &= (~I2C_CONTROL_CLK_EXT_EN);
 		else
 			control_reg |= I2C_CONTROL_CLK_EXT_EN;
@@ -2471,6 +2491,13 @@ static int mtk_i2c_parse_dt(struct device_node *np, struct mtk_i2c *i2c)
 	i2c->have_pmic = of_property_read_bool(np, "mediatek,have-pmic");
 	i2c->use_push_pull =
 		of_property_read_bool(np, "mediatek,use-push-pull");
+	i2c->disable_clk_stretch =
+		of_property_read_bool(np, "mediatek,disable-clk-stretch");
+	if (i2c->disable_clk_stretch)
+		i2c->disable_speed_compensate = true;
+	else
+		i2c->disable_speed_compensate =
+			of_property_read_bool(np, "mediatek,disable-speed-compensate");
 	of_property_read_u32(np, "scl-gpio-id", &i2c->scl_gpio_id);
 	of_property_read_u32(np, "sda-gpio-id", &i2c->sda_gpio_id);
 	i2c->wake_scp_check_en = of_property_read_bool(np, "mediatek,wake-scp-check-en");

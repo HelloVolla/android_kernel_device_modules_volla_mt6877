@@ -210,6 +210,11 @@ config DEVICE_MODULES_CHARGER_MT6370
 	  This driver can also be built as a module. If so, the module
 	  will be called "mt6370-charger".
 
+config DEVICE_MODULES_CHARGER_SC8960X
+	tristate "MediaTek SC8960X Charger Driver"
+	help
+	  Say Y here to enable SC8960X Charger Part.
+
 config CHARGER_MT6362
 	tristate "MT6362 SPMI CHG driver"
 	depends on MFD_MT6362
@@ -321,5 +326,104 @@ config CHARGER_SGM41516D
 	  It depends on config MTK_SMART_BATTERY
 	  and config MTK_SWCHR_SUPPORT
 	  Set to Yes if SGM41516D is used.
+
+#Drv add, sw charge ic, start
+
+#Drv add, sw charge ic, end
+
+#Drv add, charge pump ic, start
+config CHARGER_SC8551
+	tristate "Richtek SC8551 Divider Charger Driver"
+	help
+	  Say Y here to enable support of SC8551 divider charger
+	  It is mainly used as divider charger for
+	  direct charge
+	  It depends on config MTK_CHARGER
+
+config SC854X_CHARGER
+	tristate "SC8545-SC8549 Charger Pump driver"
+	default n
+	help
+	  If you say yes here you will get support for the SC8545-SC8549 Charge Pump.
+	  This driver can give support for SC8545-SC8549 Interface.
+
+#Drv add, charge pump ic, end
+
+#Drv add, fg ic, start
+config EXT_FUEL_GAGUE_SUPPORT
+	bool "customer external gauge support"
+	default n
+	help
+	  Set to Yes if ext fuel is used.
+
+config BATTERY_CW2217
+	tristate "customer external gauge cw2217"
+	depends on EXT_FUEL_GAGUE_SUPPORT
+	help
+	  Set to Yes if cw2217 is used.
+#Drv add, fg ic, end
+
+#Drv add, wireless charge ic, start
+config PRIZE_MT5725_SUPPORT_15W
+	tristate "PRIZE_MT5725_SUPPORT_15W"
+	default n
+	help
+	  Set to Yes if mt5725_15W is used.
+
+config PRIZE_MT5728_SUPPORT_30W
+	tristate "MT5728 Battery driver"
+	depends on I2C
+	select REGMAP_I2C
+	help
+	  Say Y here to enable support for the cellwise MT5728
+	  battery fuel gauge (used in the Pinebook Pro & others)
+
+	  This driver can also be built as a module. If so, the module will be
+	  called MT5728.
+
+#Drv add, wireless charge ic, end
+
+#Drv add, factory test feature, start
+config FACTORY_CHARGE
+	bool "FACTORY_CHARGE"
+	bool "Factory charge node"
+	help
+	  Say Y here to create factory charge class
+	  and drivers.
+
+config SECOND_CHARGER_SUPPORT
+	bool "SECOND_CHARGER_SUPPORT"
+	bool "Second charger support"
+	help
+	  Say Y here to create second charge node
+	  and drivers.
+config THIRD_CHARGER_SUPPORT
+	bool "THIRD_CHARGER_SUPPORT"
+	bool "Third charger support"
+	help
+	  Say Y here to create third charge node
+	  and drivers.
+#Drv add, factory test feature, end
+
+#Drv add, customer feature, start
+config  PRIZE_ATOC_TYPEC_CHARGE
+	bool "A-C 30w charge"
+	default n
+	help
+	  Set to Yes if A-C 30w charge is used.
+
+config CHARGER_STEP_CHARGE
+	bool "Step charge"
+	help
+	  Say Y here to enable step charge
+	  and drivers.
+
+config CHARGER_FFC_CHARGE
+	bool "ffc charge support"
+	help
+	  Say Y here to enable ffc charge
+	  and drivers.
+
+#Drv add, customer feature, end
 
 source "$(KCONFIG_EXT_PREFIX)drivers/power/supply/ufcs/Kconfig"

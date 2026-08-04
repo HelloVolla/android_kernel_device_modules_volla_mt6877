@@ -11,6 +11,7 @@
 
 struct stCAM_CAL_LIST_STRUCT g_camCalList[] = {
 	/*Below is commom sensor */
+#if 0
 	{IMX519_SENSOR_ID, 0xA0, Common_read_region},
 	{S5K2T7SP_SENSOR_ID, 0xA4, Common_read_region},
 	{IMX338_SENSOR_ID, 0xA0, Common_read_region},
@@ -28,6 +29,16 @@ struct stCAM_CAL_LIST_STRUCT g_camCalList[] = {
 	{S5K4H7_SENSOR_ID, 0xA0, zte_s5k4h7_read_region},
 	{S5K4H7SUB_SENSOR_ID, 0xA0, zte_s5k4h7_sub_read_region},
 #endif
+#endif
+
+/* prize add by chenwenhui start */
+	{OV50A40TSP_SENSOR_ID, 0xB0, Common_read_region},
+	{OV50A40_SENSOR_ID, 0xA0, Common_read_region},
+	{OV16A1Q_SENSOR_ID, 0xA0, Common_read_region},
+	{GC02M1MACRO_SENSOR_ID, 0xA2, Common_read_region},
+	{GC08A3WIDE_SENSOR_ID, 0xA0, Common_read_region},
+/* prize add by chenwenhui end */
+
 	/*  ADD before this line */
 	{0, 0, 0}       /*end of list */
 };

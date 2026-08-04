@@ -67,7 +67,25 @@ int get_uisoc(struct mtk_charger *info)
 	union power_supply_propval prop = {0};
 	struct power_supply *bat_psy = NULL;
 	int ret = 0;
-
+//drv huangjiwu for ext fgu start
+#if IS_ENABLED(CONFIG_EXT_FUEL_GAGUE_SUPPORT)
+	struct power_supply *bms_psy = NULL;
+#if IS_ENABLED(CONFIG_BATTERY_CW2217)
+	bms_psy = power_supply_get_by_name("cw-bat");
+#else
+	bms_psy = power_supply_get_by_name("ext-bat");
+#endif /* CONFIG_BATTERY_CW2217 */
+	if (IS_ERR_OR_NULL(bms_psy)) {
+		pr_err("%s Couldn't get bms_psy\n", __func__);
+	}
+	else{
+		ret = power_supply_get_property(bms_psy,POWER_SUPPLY_PROP_CAPACITY, &prop);
+		ret = prop.intval;
+		chr_err("gezi %s:%d\n", __func__,ret);
+		return ret;
+	}
+#endif /* CONFIG_EXT_FUEL_GAGUE_SUPPORT */
+//drv huangjiwu for ext fgu end
 	bat_psy = info->bat_manager_psy;
 
 	if (bat_psy == NULL || IS_ERR(bat_psy)) {
@@ -110,6 +128,27 @@ int get_battery_voltage(struct mtk_charger *info)
 	union power_supply_propval prop = {0};
 	struct power_supply *bat_psy = NULL;
 	int ret = 0;
+
+//drv huangjiwu for ext fgu start
+#if IS_ENABLED(CONFIG_EXT_FUEL_GAGUE_SUPPORT)
+	struct power_supply *bms_psy = NULL;
+#if IS_ENABLED(CONFIG_BATTERY_CW2217)
+	bms_psy = power_supply_get_by_name("cw-bat");
+#else
+	bms_psy = power_supply_get_by_name("ext-bat");
+#endif /* CONFIG_BATTERY_CW2217 */
+
+	if (IS_ERR_OR_NULL(bms_psy)) {
+		pr_err("%s Couldn't get bms_psy\n", __func__);
+	}
+	else {
+		ret = power_supply_get_property(bms_psy,POWER_SUPPLY_PROP_VOLTAGE_NOW, &prop);
+		ret = prop.intval / 1000;
+		chr_err("gezi %s:%d\n", __func__,ret);
+		return ret;
+	}
+#endif /* CONFIG_EXT_FUEL_GAGUE_SUPPORT */
+//drv huangjiwu for ext fgu end
 
 	bat_psy = info->bat_psy;
 
@@ -181,6 +220,27 @@ int get_battery_temperature(struct mtk_charger *info)
 	int ret = 0;
 	int tmp_ret = 0;
 
+//drv huangjiwu for ext fgu start
+#if IS_ENABLED(CONFIG_EXT_FUEL_GAGUE_SUPPORT)
+	struct power_supply *bms_psy = NULL;
+#if IS_ENABLED(CONFIG_BATTERY_CW2217)
+	bms_psy = power_supply_get_by_name("cw-bat");
+#else
+	bms_psy = power_supply_get_by_name("ext-bat");
+#endif /* CONFIG_BATTERY_CW2217 */
+
+	if (IS_ERR_OR_NULL(bms_psy)) {
+		pr_err("%s Couldn't get bms_psy\n", __func__);
+	}
+	else{
+		ret = power_supply_get_property(bms_psy,POWER_SUPPLY_PROP_TEMP, &prop);
+		ret = prop.intval / 10;
+		chr_err("gezi %s:%d\n", __func__,ret);
+		return ret;
+	}
+#endif
+//drv huangjiwu for ext fgu end
+
 	bat_psy = info->bat_psy;
 
 	if (bat_psy == NULL || IS_ERR(bat_psy)) {
@@ -211,6 +271,26 @@ int get_battery_current(struct mtk_charger *info)
 	struct power_supply *bat_psy = NULL;
 	int ret = 0;
 	int tmp_ret = 0;
+//drv huangjiwu for ext fgu start
+#if IS_ENABLED(CONFIG_EXT_FUEL_GAGUE_SUPPORT)
+	struct power_supply *bms_psy = NULL;
+#if IS_ENABLED(CONFIG_BATTERY_CW2217)
+	bms_psy = power_supply_get_by_name("cw-bat");
+#else
+	bms_psy = power_supply_get_by_name("ext-bat");
+#endif /* CONFIG_BATTERY_CW2217 */
+
+	if (IS_ERR_OR_NULL(bms_psy)) {
+		pr_err("%s Couldn't get bms_psy\n", __func__);
+	}
+	else{
+		ret = power_supply_get_property(bms_psy,POWER_SUPPLY_PROP_CURRENT_NOW, &prop);
+		ret = prop.intval / 1000;
+		chr_err("gezi %s:%d\n", __func__,ret);
+		return ret;
+	}
+#endif
+//drv huangjiwu for ext fgu  end
 
 	bat_psy = info->bat_psy;
 
@@ -277,6 +357,25 @@ static int get_pmic_vbus(struct mtk_charger *info, int *vchr)
 	union power_supply_propval prop = {0};
 	static struct power_supply *chg_psy;
 	int ret;
+//drv huangjiwu for pimc vbus start
+#if IS_ENABLED(CONFIG_READ_PMIC_VBUS)
+	static struct power_supply *batt_psy;
+
+	if(batt_psy == NULL)
+		batt_psy = power_supply_get_by_name("battery");
+
+	if (IS_ERR_OR_NULL(batt_psy)) {
+		pr_err("%s Couldn't get batt_psy\n", __func__);
+	} else {
+		ret = power_supply_get_property(batt_psy,
+			POWER_SUPPLY_PROP_INPUT_VOLTAGE_LIMIT, &prop);
+		*vchr = prop.intval;
+		chr_err("vbus:%s:%d\n", __func__, *vchr);
+
+		return ret;
+	}
+#endif
+//drv huangjiwu for pimc vbus end
 
 	chg_psy = power_supply_get_by_name("mtk_charger_type");
 	if (chg_psy == NULL || IS_ERR(chg_psy)) {
@@ -318,7 +417,16 @@ int get_ibat(struct mtk_charger *info)
 
 	if (info == NULL)
 		return -EINVAL;
+	//drv huangjiwu 20231124 for  celiang ibat start
+	#if IS_ENABLED(CONFIG_READ_PMIC_VBUS)||IS_ENABLED(CONFIG_CHARGER_UPM6910D)
+	ret = get_battery_current(info);
+	return  ret;
+	#else
+	//drv huangjiwu 20231124 for  celiang ibat end
 	ret = charger_dev_get_ibat(info->chg1_dev, &ibat);
+	//drv huangjiwu 20231124 for  celiang ibat start
+	#endif
+	//drv huangjiwu 20231124 for  celiang ibat end
 	if (ret < 0)
 		chr_err("%s: get ibat failed: %d\n", __func__, ret);
 

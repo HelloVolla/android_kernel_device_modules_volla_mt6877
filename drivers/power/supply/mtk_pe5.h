@@ -19,13 +19,13 @@
 extern int pe50_get_log_level(void);
 #define PE50_DBG(fmt, ...) \
 	do { \
-		if (pe50_get_log_level() >= PE50_DBG_LEVEL) \
+		if (pe50_get_log_level() >= PE50_ERR_LEVEL) \
 			pr_info("[PE50]%s " fmt, __func__, ##__VA_ARGS__); \
 	} while (0)
 
 #define PE50_INFO(fmt, ...) \
 	do { \
-		if (pe50_get_log_level() >= PE50_INFO_LEVEL) \
+		if (pe50_get_log_level() >= PE50_ERR_LEVEL) \
 			pr_info("[PE50]%s " fmt, __func__, ##__VA_ARGS__); \
 	} while (0)
 
@@ -175,6 +175,7 @@ struct pe50_algo_data {
 	enum pe50_thermal_level tdvchg_level;
 	enum pe50_thermal_level tswchg_level;
 	int input_current_limit;
+	int current_limit; // drv add tankaikun, add step charging, 20231130
 	int cv_limit;
 	u32 start_soc_max;		/* algo start soc upper bound */
 };

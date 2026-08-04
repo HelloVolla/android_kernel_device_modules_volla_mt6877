@@ -33,6 +33,7 @@
 #define DISP_REG_WDMA_INTEN 0x0000
 #define INTEN_FLD_FME_CPL_INTEN REG_FLD_MSB_LSB(0, 0)
 #define INTEN_FLD_FME_UND_INTEN REG_FLD_MSB_LSB(1, 1)
+#define INTEN_FLD_FIFO_FULL_INTEN REG_FLD_MSB_LSB(2, 2)
 #define DISP_REG_WDMA_INTSTA 0x0004
 #define DISP_REG_WDMA_EN 0x0008
 #define WDMA_EN BIT(0)
@@ -201,7 +202,10 @@
 
 #define MT6991_OVLSYS1_WDMA0_AID_MANU 0x000
 #define MT6991_DISP1_WDMA1_AID_SETTING 0xB20
+#define MT6991_DISP1_WDMA4_AID_SETTING 0xB2C
 #define MT6991_DISP1_AID_SEL_MANUAL 0x10004
+#define DISP_WDMA1_AID_SEL_MANUAL	BIT(2)
+#define DISP_WDMA4_AID_SEL_MANUAL	BIT(5)
 
 /* AID offset in mmsys config */
 #define MT6895_WDMA0_AID_SEL	(0xB1CUL)
@@ -405,6 +409,10 @@ static irqreturn_t mtk_wdma_irq_handler(int irq, void *dev_id)
 			mtk_smi_dbg_hang_detect("wdma-underrun");
 		}
 	}
+	if (val & BIT(2)) {
+		DDPMSG("[IRQ] %s: FIFO FULL\n",
+			  mtk_dump_comp_str(wdma));
+	}
 
 	ret = IRQ_HANDLED;
 
@@ -592,7 +600,8 @@ static void mtk_wdma_start(struct mtk_ddp_comp *comp, struct cmdq_pkt *handle)
 		mtk_ddp_write(comp, inten, DISP_REG_UFBC_WDMA_INTEN, handle);
 	} else {
 		inten = REG_FLD_VAL(INTEN_FLD_FME_CPL_INTEN, 1) |
-			REG_FLD_VAL(INTEN_FLD_FME_UND_INTEN, 1);
+			REG_FLD_VAL(INTEN_FLD_FME_UND_INTEN, 1) |
+			REG_FLD_VAL(INTEN_FLD_FIFO_FULL_INTEN, 1);
 		mtk_ddp_write(comp, WDMA_EN, DISP_REG_WDMA_EN, handle);
 		mtk_ddp_write(comp, inten, DISP_REG_WDMA_INTEN, handle);
 	}
@@ -679,11 +688,7 @@ static void mtk_wdma_stop(struct mtk_ddp_comp *comp, struct cmdq_pkt *handle)
 		comp->fbdc_bw = 0;
 		comp->hrt_bw = 0;
 	} else {
-		mtk_ddp_write(comp, 0x0, DISP_REG_WDMA_INTEN, handle);
 		mtk_ddp_write(comp, 0x0, DISP_REG_WDMA_EN, handle);
-		mtk_ddp_write(comp, 0x0, DISP_REG_WDMA_INTSTA, handle);
-		mtk_ddp_write(comp, 0x01, DISP_REG_WDMA_RST, handle);
-		mtk_ddp_write(comp, 0x00, DISP_REG_WDMA_RST, handle);
 	}
 
 	if (data && data->sodi_config)
@@ -1725,6 +1730,7 @@ static void mtk_wdma_addon_config(struct mtk_ddp_comp *comp,
 		bw_base = div_u64(bw_base, 1000) * 2;
 
 		mtk_ddp_comp_io_cmd(comp, NULL, PMQOS_SET_HRT_BW, &bw_base);
+		comp->hrt_bw = bw_base;
 	}
 	if (priv->data->mmsys_id == MMSYS_MT6899) {
 		bpp = mtk_get_format_bpp(comp->fb->format->format);
@@ -1783,20 +1789,32 @@ static void mtk_wdma_addon_config(struct mtk_ddp_comp *comp,
 			mmsys_reg = priv->side_config_regs_pa;
 			cmdq_pkt_write(handle, comp->cmdq_base,
 							mmsys_reg + MT6989_DISP1_AID_SEL_MANUAL,
-								DISP_WDMA0_AID_SEL_MANUAL, DISP_WDMA0_AID_SEL_MANUAL);
+							DISP_WDMA0_AID_SEL_MANUAL, DISP_WDMA0_AID_SEL_MANUAL);
 			cmdq_pkt_write(handle, comp->cmdq_base,
-							mmsys_reg + MT6989_DISP1_WDMA0_AID_SETTING, BIT(0), BIT(0));
+						mmsys_reg + MT6989_DISP1_WDMA0_AID_SETTING,
+						BIT(0), BIT(0));
 		} else if (priv->data->mmsys_id == MMSYS_MT6991) {
 			mtk_ddp_write(comp, 0x0,
 				WDMA_SECURITY_DISABLE, handle);
 			mmsys_reg = priv->side_config_regs_pa;
-			// DISP1_AID_SEL_MANUAL
-			cmdq_pkt_write(handle, comp->cmdq_base,
+			if (comp->id == DDP_COMPONENT_WDMA1) {
+				// DISP1_AID_SEL_MANUAL
+				cmdq_pkt_write(handle, comp->cmdq_base,
 							mmsys_reg + MT6991_DISP1_AID_SEL_MANUAL,
-								DISP_WDMA0_AID_SEL_MANUAL, DISP_WDMA0_AID_SEL_MANUAL);
-			// DISP1_WDMA1_AID_SETTING
-			cmdq_pkt_write(handle, comp->cmdq_base,
-							mmsys_reg + MT6991_DISP1_WDMA1_AID_SETTING, BIT(0), BIT(0));
+							DISP_WDMA0_AID_SEL_MANUAL, DISP_WDMA0_AID_SEL_MANUAL);
+				// DISP1_WDMA1_AID_SETTING
+				cmdq_pkt_write(handle, comp->cmdq_base,
+						mmsys_reg + MT6991_DISP1_WDMA1_AID_SETTING,
+						BIT(0), BIT(0));
+			} else if (comp->id == DDP_COMPONENT_WDMA4) {
+				cmdq_pkt_write(handle, comp->cmdq_base,
+						mmsys_reg + MT6991_DISP1_AID_SEL_MANUAL,
+						DISP_WDMA4_AID_SEL_MANUAL, DISP_WDMA4_AID_SEL_MANUAL);
+				// DISP1_WDMA1_AID_SETTING
+				cmdq_pkt_write(handle, comp->cmdq_base,
+						mmsys_reg + MT6991_DISP1_WDMA4_AID_SETTING,
+						BIT(0), BIT(0));
+			}
 		}
 	} else {
 		if (priv->data->mmsys_id == MMSYS_MT6989 ||
@@ -1813,13 +1831,21 @@ static void mtk_wdma_addon_config(struct mtk_ddp_comp *comp,
 			mtk_ddp_write(comp, 0x7,
 				WDMA_SECURITY_DISABLE, handle);
 			mmsys_reg = priv->side_config_regs_pa;
-			// DISP1_AID_SEL_MANUAL
-			cmdq_pkt_write(handle, comp->cmdq_base,
-							mmsys_reg + MT6991_DISP1_AID_SEL_MANUAL,
-								0, DISP_WDMA0_AID_SEL_MANUAL);
-			// DISP1_WDMA1_AID_SETTING
-			cmdq_pkt_write(handle, comp->cmdq_base,
-							mmsys_reg + MT6991_DISP1_WDMA1_AID_SETTING, 0, BIT(0));
+			if (comp->id == DDP_COMPONENT_WDMA1) {
+				// DISP1_AID_SEL_MANUAL
+				cmdq_pkt_write(handle, comp->cmdq_base,
+								mmsys_reg + MT6991_DISP1_AID_SEL_MANUAL,
+									0, DISP_WDMA1_AID_SEL_MANUAL);
+				// DISP1_WDMA1_AID_SETTING
+				cmdq_pkt_write(handle, comp->cmdq_base,
+								mmsys_reg + MT6991_DISP1_WDMA1_AID_SETTING, 0, BIT(0));
+			} else if (comp->id == DDP_COMPONENT_WDMA4) {
+				cmdq_pkt_write(handle, comp->cmdq_base,
+								mmsys_reg + MT6991_DISP1_AID_SEL_MANUAL,
+									0, DISP_WDMA4_AID_SEL_MANUAL);
+				cmdq_pkt_write(handle, comp->cmdq_base,
+								mmsys_reg + MT6991_DISP1_WDMA4_AID_SETTING, 0, BIT(0));
+			}
 		}
 	}
 
@@ -1844,9 +1870,8 @@ golden_setting:
 	gsc = addon_config->addon_wdma_config.p_golden_setting_context;
 	mtk_wdma_golden_setting(comp, gsc, handle);
 
-	DDPINFO("%s:comp:%u,addr:0x%lx,roi:(%d,%d,%d,%d),fmt:0x%x\n",
-		__func__, comp->id, (unsigned long)addr, clip_x, clip_y,
-		clip_w, clip_h, comp->fb->format->format);
+	DDPMSG("[capture] config addr:0x%lx, roi:(%d,%d,%d,%d)\n",
+		(unsigned long)addr, clip_x, clip_y, clip_w, clip_h);
 	cfg_info->addr = addr;
 	cfg_info->width = clip_w;
 	cfg_info->height = clip_h;
@@ -2023,6 +2048,15 @@ void mtk_wdma_dump_golden_setting(struct mtk_ddp_comp *comp)
 		REG_FLD_VAL_GET(BUF_CON4_FLD_ISSUE_REQ_TH_V, value));
 }
 
+bool wdma_can_not_skip_secure(struct mtk_ddp_comp *comp)
+{
+	struct mtk_drm_private *priv = comp->mtk_crtc->base.dev->dev_private;
+
+	if (priv->data->mmsys_id == MMSYS_MT6991)
+		return false;
+	return true;
+}
+
 int mtk_wdma_dump(struct mtk_ddp_comp *comp)
 {
 	void __iomem *baddr = comp->regs;
@@ -2035,7 +2069,7 @@ int mtk_wdma_dump(struct mtk_ddp_comp *comp)
 
 	DDPDUMP("== %s REGS:0x%pa ==\n", mtk_dump_comp_str(comp), &comp->regs_pa);
 
-	if (comp->mtk_crtc && comp->mtk_crtc->sec_on) {
+	if (comp->mtk_crtc && comp->mtk_crtc->sec_on && wdma_can_not_skip_secure(comp)) {
 		DDPDUMP("Skip dump secure wdma!\n");
 		return 0;
 	}
@@ -2168,7 +2202,7 @@ int mtk_wdma_analysis(struct mtk_ddp_comp *comp)
 
 	DDPDUMP("== DISP %s ANALYSIS:0x%pa ==\n", mtk_dump_comp_str(comp), &comp->regs_pa);
 
-	if (comp->mtk_crtc && comp->mtk_crtc->sec_on) {
+	if (comp->mtk_crtc && comp->mtk_crtc->sec_on && wdma_can_not_skip_secure(comp)) {
 		DDPDUMP("Skip dump secure wdma!\n");
 		return 0;
 	}
@@ -2356,7 +2390,7 @@ static int mtk_wdma_io_cmd(struct mtk_ddp_comp *comp, struct cmdq_pkt *handle,
 
 		data->larb_id = -1;
 		data->bw = 0;
-		if (data->type != CHANNEL_HRT_RW)
+		if (data->type != CHANNEL_HRT_RW && data->type != CHANNEL_HRT_WRITE)
 			break;
 
 		if (comp->larb_num == 1)
@@ -2408,8 +2442,6 @@ static int mtk_wdma_io_cmd(struct mtk_ddp_comp *comp, struct cmdq_pkt *handle,
 					wdma->info_data->force_ostdl_bw, bw);
 				comp->last_hrt_bw = ostdl_bw;
 			}
-			if (wdma->data->hrt_channel)
-				mtk_vidle_channel_bw_set(bw, wdma->data->hrt_channel(comp));
 		}
 		ret = WDMA_REQ_HRT;
 		break;
@@ -2782,6 +2814,18 @@ static const struct mtk_disp_wdma_data mt6781_wdma_driver_data = {
 	.is_support_34bits = false,
 };
 
+static const struct mtk_disp_wdma_data mt6771_wdma_driver_data = {
+	.fifo_size_1plane = 297,
+	.fifo_size_uv_1plane = 1,
+	.fifo_size_2plane = 197,
+	.fifo_size_uv_2plane = 97,
+	.fifo_size_3plane = 197,
+	.fifo_size_uv_3plane = 47,
+	.support_shadow = false,
+	.need_bypass_shadow = true,
+	.is_support_34bits = false,
+};
+
 static const struct mtk_disp_wdma_data mt6879_wdma_driver_data = {
 	.fifo_size_1plane = 465,
 	.fifo_size_uv_1plane = 29,
@@ -2947,6 +2991,8 @@ static const struct of_device_id mtk_disp_wdma_driver_dt_match[] = {
 	 .data = &mt6779_wdma_driver_data},
 	{.compatible = "mediatek,mt6761-disp-wdma",
 	 .data = &mt6761_wdma_driver_data},
+	{.compatible = "mediatek,mt6771-disp-wdma",
+	 .data = &mt6771_wdma_driver_data},
 	{.compatible = "mediatek,mt6765-disp-wdma",
 	 .data = &mt6765_wdma_driver_data},
 	{.compatible = "mediatek,mt6768-disp-wdma",

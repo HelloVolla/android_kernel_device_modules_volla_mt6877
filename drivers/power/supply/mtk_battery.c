@@ -846,7 +846,7 @@ int force_get_tbat(struct mtk_battery *gm, bool update)
 	int bat_temperature_val = 0;
 
 	prop_control = &gm->prop_control;
-
+	return 25;
 	if (gm->is_probe_done == false) {
 		gm->cur_bat_temp = 25;
 		return 25;

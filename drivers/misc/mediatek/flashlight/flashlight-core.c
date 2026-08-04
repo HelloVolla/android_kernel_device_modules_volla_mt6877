@@ -609,12 +609,20 @@ static int pt_is_low(int pt_low_vol, int pt_low_bat, int pt_over_cur)
 			is_low = 2;
 	}
 
+// prize add by chenwenhui for low power start
+	//return is_low;
+	is_low = 0;
 	return is_low;
+// prize add by chenwenhui for low power end
 }
 
 static int pt_trigger(void)
 {
 	struct flashlight_dev *fdev;
+
+// prize add by chenwenhui for low power start
+	return 0;
+// prize add by chenwenhui for low power end
 
 	mutex_lock(&fl_mutex);
 	list_for_each_entry(fdev, &flashlight_list, node) {

@@ -1466,7 +1466,9 @@ static struct platform_data *get_platform_data(int seg_id)
 			ret_platform_data.peak_power_combo_table_cpu = peak_power_combo_table_cpu_mt6989_89t;
 		else if (seg_id == 15) //mt6989_89tt
 			ret_platform_data.peak_power_combo_table_cpu = peak_power_combo_table_cpu_mt6989_89tt;
-	}
+	} else if (strncmp(match->compatible, "mediatek,MT6991", sizeof("mediatek,MT6991")) == 0)
+		if (seg_id == 5) //mt6991_91t
+			ret_platform_data.peak_power_combo_table_cpu = peak_power_combo_table_cpu_mt6991_91t;
 
 	return &ret_platform_data;
 

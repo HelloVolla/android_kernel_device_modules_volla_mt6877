@@ -23,6 +23,7 @@ obj-$(CONFIG_CHARGER_RT9465)	+= rt9465.o
 obj-$(CONFIG_DEVICE_MODULES_CHARGER_MT6360) += mt6360_charger.o
 obj-$(CONFIG_DEVICE_MODULES_CHARGER_MT6370)	+= mt6370-charger.o
 obj-$(CONFIG_DEVICE_MODULES_CHARGER_MT6360)	+= mt6360_pmu_chg.o
+obj-$(CONFIG_DEVICE_MODULES_CHARGER_SC8960X)+= sc8960x_charger.o
 obj-$(CONFIG_CHARGER_MT6362)	+= mt6362-chg.o
 obj-$(CONFIG_CHARGER_MT6375)	+= mt6375-charger.o
 obj-$(CONFIG_CHARGER_MT6379)	+= mt6379-chg.o
@@ -71,3 +72,27 @@ obj-$(CONFIG_UFCS_CLASS)	+= ufcs/
 
 obj-$(CONFIG_CHARGER_BQ2589X)	+= bq2589x_charger.o
 obj-$(CONFIG_CHARGER_BQ25601) += bq25601.o
+
+#Drv add, sw charge ic, start
+
+#Drv add, sw charge ic, end
+
+#Drv add, charge pump ic, start
+obj-$(CONFIG_CHARGER_SC8551) += sc8551-charger.o
+#Drv add, charge pump ic, end
+
+#Drv add, fg ic, start
+obj-$(CONFIG_BATTERY_CW2217) += cw221x_fuel_gauge.o
+#Drv add, fg ic, end
+
+#Drv add, wireless charge ic, start
+
+#Drv add, wireless charge ic, end
+
+#Drv add, factory test feature, start
+
+#Drv add, factory test feature, end
+
+#Drv add, customer feature, start
+
+#Drv add, customer feature, end

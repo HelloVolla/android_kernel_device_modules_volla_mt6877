@@ -28,6 +28,12 @@
 #include <rt6160.h>
 #endif
 
+#if IS_ENABLED(CONFIG_MFD_MTK_SPMI_PMIC)
+#include <mtk-spmi-pmic-debug.h>
+#define MAX_SPMI_GLITCH_ID spmi_glitch_idx_cnt
+#else
+#define MAX_SPMI_GLITCH_ID 96
+#endif
 
 #if IS_ENABLED(CONFIG_MTK_SWPM_MODULE)
 
@@ -745,8 +751,13 @@ static int mbraink_v6991_power_get_pmic_voltage_info(
 
 static int mbraink_v6991_power_sys_res_init(void)
 {
-	mbraink_sys_res_plat_init();
-	mbraink_sys_res_mbrain_plat_init();
+	int ret = 0;
+
+	ret = mbraink_sys_res_plat_init();
+	if (!ret)
+		ret = mbraink_sys_res_mbrain_plat_init();
+	else
+		return -1;
 
 	return 0;
 }
@@ -964,6 +975,27 @@ static int mbraink_v6991_power_get_lpmstate_info(struct mbraink_lpm_state_data *
 	return ret;
 }
 
+static int mbraink_v6991_power_get_spmi_glitch_info(
+	struct mbraink_spmi_glitch_struct_data *mbraink_spmi_glitch_data)
+{
+	u16 Buf[MAX_SPMI_GLITCH_ID] = {0};
+	int ret = 0;
+	int num = 0;
+
+	if (mbraink_spmi_glitch_data == NULL) {
+		pr_info("mbraink_spmi_glitch_data is null\n");
+		return -1;
+	}
+
+	mtk_spmi_pmic_get_glitch_cnt(Buf);
+	num = (MAX_PMIC_SPMI_GLITCH_SZ > MAX_SPMI_GLITCH_ID) ?
+		MAX_SPMI_GLITCH_ID : MAX_PMIC_SPMI_GLITCH_SZ;
+	memcpy(mbraink_spmi_glitch_data->spmi_glitch, Buf, sizeof(u16)*num);
+	mbraink_spmi_glitch_data->spmi_glitch_count = num;
+
+	return ret;
+}
+
 static struct mbraink_power_ops mbraink_v6991_power_ops = {
 	.getVotingInfo = mbraink_v6991_power_get_voting_info,
 	.getPowerInfo = NULL,
@@ -982,6 +1014,7 @@ static struct mbraink_power_ops mbraink_v6991_power_ops = {
 	.getMmdvfsInfo = mbraink_v6991_power_get_mmdfvs_info,
 	.getPowerThrottleHwInfo = mbraink_v6991_power_get_power_throttle_hw_info,
 	.getLpmStateInfo = mbraink_v6991_power_get_lpmstate_info,
+	.getSpmiGlitchInfo = mbraink_v6991_power_get_spmi_glitch_info,
 };
 
 int mbraink_v6991_power_init(void)

@@ -84,6 +84,8 @@ enum IMGSENSOR_RETURN imgsensor_hw_init(struct IMGSENSOR_HW *phw)
 		switch (i) {
 		case IMGSENSOR_SENSOR_IDX_MAIN2:
 			{
+			  // prize modify by chenwenhui for camera start
+			  #if 0
 				if (IS_MT6877(phw->g_platform_id) ||
 					IS_MT6833(phw->g_platform_id) ||
 					IS_MT6789(phw->g_platform_id) ||
@@ -92,16 +94,26 @@ enum IMGSENSOR_RETURN imgsensor_hw_init(struct IMGSENSOR_HW *phw)
 					pcust_pwr_cfg->i2c_dev = IMGSENSOR_I2C_DEV_1;
 				else
 					pcust_pwr_cfg->i2c_dev = IMGSENSOR_I2C_DEV_2;
+			  #else
+				pcust_pwr_cfg->i2c_dev = IMGSENSOR_I2C_DEV_2;
+			  #endif
+			  // prize modify by chenwenhui for camera end
 			}
 			break;
 		case IMGSENSOR_SENSOR_IDX_SUB2:
 			{
+			  // prize modify by chenwenhui for camera start
+			  #if 0
 				if (IS_MT6785(phw->g_platform_id) ||
 					IS_MT6779(phw->g_platform_id) ||
 					IS_MT6768(phw->g_platform_id))
 					pcust_pwr_cfg->i2c_dev = IMGSENSOR_I2C_DEV_1;
 				else
 					pcust_pwr_cfg->i2c_dev = IMGSENSOR_I2C_DEV_3;
+			  #else
+				pcust_pwr_cfg->i2c_dev = IMGSENSOR_I2C_DEV_2;
+			  #endif
+			  // prize modify by chenwenhui for camera end
 			}
 			break;
 		case IMGSENSOR_SENSOR_IDX_MAIN3:
@@ -113,6 +125,7 @@ enum IMGSENSOR_RETURN imgsensor_hw_init(struct IMGSENSOR_HW *phw)
 				else if (IS_MT6893(phw->g_platform_id) ||
 					IS_MT6885(phw->g_platform_id) ||
 					IS_MT6873(phw->g_platform_id) ||
+					IS_MT6781(phw->g_platform_id) ||
 					IS_MT6855(phw->g_platform_id))
 					pcust_pwr_cfg->i2c_dev = IMGSENSOR_I2C_DEV_4;
 				else
@@ -371,7 +384,7 @@ enum IMGSENSOR_RETURN imgsensor_hw_power(
 		ret = IMGSENSOR_RETURN_ERROR;
 		return ret;
 	}
-	if (IS_MT6873(phw->g_platform_id) || IS_MT6853(phw->g_platform_id))
+	if (IS_MT6873(phw->g_platform_id))
 		imgsensor_hw_power_sequence(
 				phw,
 				sensor_idx,

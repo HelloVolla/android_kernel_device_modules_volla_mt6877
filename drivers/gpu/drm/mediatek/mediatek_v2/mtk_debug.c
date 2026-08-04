@@ -3018,6 +3018,27 @@ static void process_dbg_opt(const char *opt)
 			if (mtk_crtc)
 				mtk_crtc->is_force_mml_scen = !!value;
 		}
+	} else if (strncmp(opt, "view_disp_info", 14) == 0) {
+		struct drm_crtc *crtc;
+		struct mtk_drm_crtc *mtk_crtc;
+
+		/* this debug cmd only for crtc0 */
+		crtc = list_first_entry(&(drm_dev)->mode_config.crtc_list, typeof(*crtc),
+					head);
+		if (IS_ERR_OR_NULL(crtc)) {
+			DDPMSG("find crtc fail\n");
+			return;
+		}
+		mtk_crtc = to_mtk_crtc(crtc);
+		if (!mtk_crtc){
+			DDPMSG("find mtk_crtc fail\n");
+			return;
+		}
+		DDPMSG("FPS = %d, display mode idx = %d, %s mode %d\n",
+			drm_mode_vrefresh(&(mtk_crtc->avail_modes[mtk_crtc->mode_idx])),
+			mtk_crtc->mode_idx,
+			(mtk_crtc_is_frame_trigger_mode(crtc) ?
+			"cmd" : "vdo"), hrt_lp_switch_get());
 	} else if (strncmp(opt, "mobile:", 7) == 0) {
 		if (strncmp(opt + 7, "on", 2) == 0)
 			g_mobile_log = 1;
@@ -6011,6 +6032,8 @@ void mtk_ovl_set_aod_scp_hrt(void)
 				sizeof(mtk_crtc->usage_ovl_compr));
 	memset(mtk_crtc->usage_ovl_ext_compr, 0,
 				sizeof(mtk_crtc->usage_ovl_ext_compr));
+	memset(mtk_crtc->usage_ovl_roi, 0,
+				sizeof(mtk_crtc->usage_ovl_roi));
 	for (i = 0; i < MAX_LAYER_NR; i++)
 		mtk_crtc->usage_ovl_fmt[i] = 4;
 

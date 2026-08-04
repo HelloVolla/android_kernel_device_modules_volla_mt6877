@@ -1,0 +1,215 @@
+config PRIZE_DRIVER_SUPPORT
+	tristate "STMicroelectronics NFC driver solution"
+	help
+	  STMicroelectronics Near Field Communication controller support.
+	  It is the master switch of STMicroelectronics NFC controller drivers.
+	  If configures to be y, NFC_ST21NFC and NFC_ST54_SPI will be
+	  selected.
+
+config CAMERA_GC0301
+	tristate "STMicroelectronics NFC driver solution - NFC Controller Driver"
+	default n
+	help
+	  STMicroelectronics CAMERA_GC0301 Near Field Communication controller
+	  functionality. If configures to be n, means devices doesn't support
+	  NFC functionality.
+
+config PRIZE_FM
+	tristate "priz fm"
+	default n
+	help
+	  PRIZE_FM. If configures to be n, means devices doesn't support
+	  NFC functionality.
+
+config PRIZE_AW2016A
+	tristate "priz AW2016A"
+	default n
+	help
+	  PRIZE_FM. If configures to be n, means devices doesn't support
+	  AW2016A functionality.
+	  
+config LEDS_AW210XX
+	tristate "LED Support for AW210XX"
+	depends on LEDS_CLASS && I2C
+	help
+	  this option enables support for the AW210XXRGB LED connected
+	  through I2C. Say Y to enable support for the AW210XX LED
+	  light automatically.
+	  
+config LEDS_AW22127
+	tristate "LED Support for AW22127"
+	depends on LEDS_CLASS && I2C
+	help
+	  this option enables support for the AW22127 LED connected
+	  through I2C. Say Y to enable support for the AW22127 LED
+	  light automatically.
+
+#liaojie prize exergen 20210128 start
+config PRIZE_EXERGEN
+        tristate "prize exergen for Mediatek package"
+		depends on I2C
+        help
+          Say y here if you have prize exergen.
+          If unsure, say N.
+
+#
+# Qcom AWINIC_HAPTIC_HV Driver
+#
+
+config AWINIC_HAPTIC_HV
+	tristate "AWINIC_HAPTIC_HV driver"
+	depends on I2C
+	help
+	  Say Y here if you have Awinic AW869X/AW869XX haptic controller
+	  chip in your system.
+	  If unsure, say N.
+	  To compile this driver as a module, choose M here: the
+	  module will be called awinic_haptic_hv.
+config PRIZE_EXERGEN_SELECT_LIST
+		string "sensor type"
+		help
+		Say y here if you have prize exergen.
+		If unsure, say N.
+#liaojie prize exergen 20210128 end
+config PRIZE_HARDWARE_INFO
+	tristate "hardware_info"
+	default n
+	help
+	  hardware_info. If configures to be n, means devices doesn't support
+	  hardwareinfo functionality.
+#hjw 
+config PRIZE_TYPEC_POSITIVE_NEGATIVE
+	tristate "typec pt ne"
+	default n
+	help
+	  hardware_info. If configures to be n, means devices doesn't support
+	  hardwareinfo functionality.
+#hjw 	
+config PRIZE_TYPEC_CHG_DET
+	tristate "typec typec neg"
+	default n
+	help
+	  hardware_info. If configures to be n, means devices doesn't support
+	  hardwareinfo functionality.
+  
+config PRIZE_ENDOSCOPE	
+	tristate "PRIZE ENDOSCOPE"
+	bool "endoscope enable"
+	default n
+	help
+	  Select Y to enable prize endoscope enable
+	  
+#drv add by situziyin 20230309 start
+config PRIZE_PIXEL_MANAGER	
+	tristate "pixel manager enable"
+	default n
+	help
+	  Select m to enable prize pixel manager
+#drv add by situziyin 20230309 end
+
+config PRIZE_COMMON_NODE
+	tristate "common node"
+	default n
+	help
+	  common_node. If configures to be n, means devices doesn't support
+	  common_node functionality.
+ 
+source "$(KCONFIG_EXT_PREFIX)drivers/misc/mediatek/prize/prize_common_node/Kconfig"
+ 
+config PRIZE_DIGITAL_LCD
+  tristate "digital lcd"
+  default n
+  help
+     digital lcd driver.
+
+#DRV added by chenjiaxi, add lpddr 8802 info (for ufs kernel-5.10), start
+config PRIZE_HARDWARE_LPDDR_INFO
+	tristate "hardware lpddr info"
+	default n
+	help
+	  hardware lpddr info. If configures to be n, means devices doesn't support
+	  hardware lpddr info functionality.
+#DRV added by chenjiaxi, add lpddr 8802 info (for ufs kernel-5.10), end
+
+#drv added by wangwei1, secondary screen driver, 20230606-start
+config PRIZE_LCD_GC9A01
+		tristate "PRIZE_LCD_GC9A01"
+		default n
+		help
+			PRIZE_LCD_GC9A01
+
+config PRIZE_LCD_GC9A01_240
+		tristate "PRIZE_LCD_GC9A01_240"
+		default n
+		help
+			PRIZE_LCD_GC9A01_240
+#drv added by wangwei1, secondary screen driver, 20230606-end
+
+#DRV added by xudongfang ,add ufs health info start
+config PRIZE_HARDWARE_INFO_UFS_HEALTH
+        tristate "hardware ufs health info"
+        default n
+        help
+          hardware ufs health info. If configures to be n, means devices doesn't support
+          hardware ufs health info functionality.
+#DRV added by xudongfang ,add ufs health info end
+#drv-add by shenwenbin for oled panel 20231213 start
+config PRIZE_OLED_NODE
+	tristate "oled node"
+	default n
+	help
+	  oled_node. If configures to be n, means devices doesn't support
+	  oled_node functionality.
+#drv-add by shenwenbin for oled panel 20231213 end
+
+#drv add by lipengpeng 20231223 start 
+config CAMERA_TTM
+	tristate "STMicroelectronics TTM driver solution - TTM Controller Driver"
+	default n
+	help
+	  STMicroelectronics CAMERA_TTM Near Field Communication controller
+	  functionality. If configures to be n, means devices doesn't support
+	  functionality.
+
+config CAMERA_SERIAL_CAMERA
+	tristate "STMicroelectronics SERIAL_CAMERA driver solution - SERIAL_CAMERA Controller Driver"
+	default n
+	help
+	  STMicroelectronics SERIAL_CAMERA Near Field Communication controller
+	  functionality. If configures to be n, means devices doesn't support
+	  functionality.	  
+#drv add by lipengpeng 20231223 end 	  
+
+#DRV added by chenjiaxi, add miniscreen driver, start
+config DRV_MINISCREEN
+	tristate "DRV_MINISCREEN"
+	default n
+	help
+	  DRV_MINISCREEN
+#source "$(KCONFIG_EXT_PREFIX)drivers/misc/mediatek/prize/miniscreen/Kconfig"
+#DRV added by chenjiaxi, add miniscreen driver, end
+source "$(KCONFIG_EXT_PREFIX)drivers/misc/mediatek/prize/haptic_hv/Kconfig"
+#drv add by lipengpeng 20240307 start
+config DRV_ADC_GMS_DETECT
+	tristate "adc gms detect"
+	default n
+	help
+	  hardware_info. If configures to be n, means devices doesn't support
+	  hardwareinfo functionality.
+
+#drv add by lipengpeng 20240307 end	  
+config PRIZE_LEPTON_FILR
+	tristate "priz lepton filr"
+	default n
+	help
+	  PRIZE_LEPTON_FILR. If configures to be n, means devices doesn't support
+	  FILR functionality.
+
+# pri BQS33-208 added by ocean 20240625 begin
+#source "$(KCONFIG_EXT_PREFIX)drivers/misc/mediatek/prize/prize_sim_state/Kconfig"
+# pri BQS33-208 added by ocean 20240625 end
+config PRIZE_CAMPING_LIGHT
+	tristate "PRIZE_CAMPING_LIGHT Driver"
+	default n
+	help
+	  PRIZE_CAMPING_LIGHT.

@@ -1000,6 +1000,34 @@ static void bm_send_cmd(struct mtk_battery_manager *bm, enum manager_cmd cmd, in
 		pr_err("%s manager_send return faiil\n",__func__);
 };
 
+//drv huangjiwu for pimc vbus start
+#if IS_ENABLED(CONFIG_READ_PMIC_VBUS)
+//voltage to VCDT
+#define VBUS_VOLTAGE_FACTOR 9462
+int force_get_vbus_internal(struct mtk_battery *gm)
+{
+	int vbus = 0;
+	int ret = 0;
+
+	ret = gauge_get_property(GAUGE_PROP_VBUS_VOLTAGE,
+						&vbus);
+	if (ret < 0) {
+		pr_err("get vbus failed:%d\n", ret);
+		return ret;
+	}
+
+	vbus = (vbus * VBUS_VOLTAGE_FACTOR) / 1000;
+
+	pr_err("get vbus voltage:%d\n", vbus);
+
+	if (vbus < 2600)
+		return 0;
+	else
+		return vbus;
+}
+#endif /* CONFIG_READ_PMIC_VBUS */
+//drv huangjiwu for pimc vbus end
+
 static enum power_supply_property battery_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
 	POWER_SUPPLY_PROP_HEALTH,
@@ -1014,9 +1042,16 @@ static enum power_supply_property battery_props[] = {
 	POWER_SUPPLY_PROP_CHARGE_COUNTER,
 	POWER_SUPPLY_PROP_TEMP,
 	POWER_SUPPLY_PROP_CAPACITY_LEVEL,
+#if 0
 	POWER_SUPPLY_PROP_TIME_TO_FULL_NOW,
+#endif
 	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
 	POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE,
+//drv huangjiwu for pimc vbus start
+#if IS_ENABLED(CONFIG_READ_PMIC_VBUS)
+	POWER_SUPPLY_PROP_INPUT_VOLTAGE_LIMIT,
+#endif
+//drv huangjiwu for pimc vbus end
 };
 
 static int bm_update_psy_property(struct mtk_battery *gm, enum bm_psy_prop prop)
@@ -1092,14 +1127,30 @@ static int bs_psy_get_property(struct power_supply *psy,
 	int ret = 0, qmax = 0, cycle = 0;
 	int curr_now = 0;
 	int curr_avg = 0;
+#if !IS_ENABLED(CONFIG_EXT_FUEL_GAGUE_SUPPORT)
 	int remain_ui = 0, remain_mah = 0;
 	int time_to_full = 0;
 	int q_max_uah = 0;
+#endif
 	int volt_now = 0;
 	int count = 0;
 	int temp = 0;
 	struct mtk_battery_manager *bm;
 	struct battery_data *bs_data;
+	// drv add tankaikun, Apply ext fuel gague, 20241030 start
+#if IS_ENABLED(CONFIG_EXT_FUEL_GAGUE_SUPPORT)
+	union power_supply_propval prop;
+	struct power_supply *bms_psy = NULL;
+#if IS_ENABLED(CONFIG_BATTERY_CW2217)
+	bms_psy = power_supply_get_by_name("cw-bat");
+#else
+	bms_psy = power_supply_get_by_name("ext-bat");
+#endif
+	if (IS_ERR_OR_NULL(bms_psy)) {
+		pr_err("%s Couldn't get bms_psy\n", __func__);
+	}
+#endif /* CONFIG_EXT_FUEL_GAGUE_SUPPORT */
+	// drv add tankaikun, Apply ext fuel gague, 20241030 end
 
 	bm = (struct mtk_battery_manager *)power_supply_get_drvdata(psy);
 	bs_data = &bm->bs_data;
@@ -1115,6 +1166,16 @@ static int bs_psy_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_PRESENT:
 		val->intval = bs_data->bat_present;
+// drv add tankaikun, Apply ext fuel gague, 20241030 start
+#if IS_ENABLED(CONFIG_EXT_FUEL_GAGUE_SUPPORT)
+		if (IS_ERR_OR_NULL(bms_psy)) {
+			val->intval = 0;
+		} else {
+			ret = power_supply_get_property(bms_psy, POWER_SUPPLY_PROP_PRESENT, &prop);
+			val->intval = prop.intval;
+		}
+#endif /* CONFIG_EXT_FUEL_GAGUE_SUPPORT */
+// drv add tankaikun, Apply ext fuel gague, 20241030 end
 		break;
 	case POWER_SUPPLY_PROP_TECHNOLOGY:
 		val->intval = bs_data->bat_technology;
@@ -1144,12 +1205,41 @@ static int bs_psy_get_property(struct power_supply *psy,
 			break;
 		}
 
+// drv add tankaikun, Apply ext fuel gague, 20241030 start
+#if IS_ENABLED(CONFIG_EXT_FUEL_GAGUE_SUPPORT)
+		if (IS_ERR_OR_NULL(bms_psy)) {
+			pr_err("%s Couldn't get bms_psy\n", __func__);
+			val->intval = 75;
+		}
+		else {
+			ret = power_supply_get_property(bms_psy,POWER_SUPPLY_PROP_CAPACITY, &prop);
+			val->intval = prop.intval;
+			bs_data->bat_capacity = prop.intval;
+		}
+		break;
+#endif /* CONFIG_EXT_FUEL_GAGUE_SUPPORT */
+// drv add tankaikun, Apply ext fuel gague, 20241030 end
+
 		if (bm->gm1->fixed_uisoc != 0xffff)
 			val->intval = bm->gm1->fixed_uisoc;
 		else
 			val->intval = bs_data->bat_capacity;
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
+// drv add tankaikun, Apply ext fuel gague, 20241030 start
+#if IS_ENABLED(CONFIG_EXT_FUEL_GAGUE_SUPPORT)
+		if (IS_ERR_OR_NULL(bms_psy)) {
+			pr_err("%s Couldn't get bms_psy\n", __func__);
+			val->intval = 0;
+		}
+		else {
+			ret = power_supply_get_property(bms_psy,POWER_SUPPLY_PROP_CURRENT_NOW, &prop);
+			val->intval = prop.intval;
+		}
+		ret = 0;
+		break;
+#endif /* CONFIG_EXT_FUEL_GAGUE_SUPPORT */
+// drv add tankaikun, Apply ext fuel gague, 20241030 end
 
 		if (bm->gm1 != NULL)
 			if(!bm->gm1->bat_plug_out)
@@ -1162,6 +1252,20 @@ static int bs_psy_get_property(struct power_supply *psy,
 		ret = 0;
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_AVG:
+// drv add tankaikun, Apply ext fuel gague, 20241030 start
+#if IS_ENABLED(CONFIG_EXT_FUEL_GAGUE_SUPPORT)
+		if (IS_ERR_OR_NULL(bms_psy)) {
+			pr_err("%s Couldn't get bms_psy\n", __func__);
+			val->intval = 0;
+		}
+		else {
+			ret = power_supply_get_property(bms_psy,POWER_SUPPLY_PROP_CURRENT_NOW, &prop);
+			val->intval = prop.intval;
+		}
+		ret = 0;
+		break;
+#endif /* CONFIG_EXT_FUEL_GAGUE_SUPPORT */
+// drv add tankaikun, Apply ext fuel gague, 20241030 end
 
 		if (bm->gm1 != NULL)
 			if(!bm->gm1->bat_plug_out)
@@ -1174,7 +1278,12 @@ static int bs_psy_get_property(struct power_supply *psy,
 		ret = 0;
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_FULL:
-
+#if IS_ENABLED(CONFIG_EXT_FUEL_GAGUE_SUPPORT)
+		if (!IS_ERR_OR_NULL(bms_psy)) {
+			power_supply_get_property(bms_psy, POWER_SUPPLY_PROP_CHARGE_FULL, &prop);
+			val->intval = prop.intval;
+		}
+#else
 		if (bm->gm1 != NULL)
 			if(!bm->gm1->bat_plug_out)
 				qmax += bm_update_psy_property(bm->gm1, QMAX_DESIGN);
@@ -1183,10 +1292,16 @@ static int bs_psy_get_property(struct power_supply *psy,
 				qmax += bm_update_psy_property(bm->gm2, QMAX_DESIGN);
 
 		val->intval = qmax * 100;
+#endif
 		ret = 0;
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_COUNTER:
-
+#if IS_ENABLED(CONFIG_EXT_FUEL_GAGUE_SUPPORT)
+		if (!IS_ERR_OR_NULL(bms_psy)) {
+			power_supply_get_property(bms_psy, POWER_SUPPLY_PROP_CHARGE_COUNTER, &prop);
+			val->intval = prop.intval;
+		}
+#else
 		if (bm->gm1 != NULL)
 			if(!bm->gm1->bat_plug_out)
 				qmax += bm_update_psy_property(bm->gm1, QMAX_DESIGN);
@@ -1195,8 +1310,23 @@ static int bs_psy_get_property(struct power_supply *psy,
 				qmax += bm_update_psy_property(bm->gm2, QMAX_DESIGN);
 
 		val->intval = bs_data->bat_capacity * qmax;
+#endif
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
+// drv add tankaikun, Apply ext fuel gague, 20241030 start
+#if IS_ENABLED(CONFIG_EXT_FUEL_GAGUE_SUPPORT)
+		if (IS_ERR_OR_NULL(bms_psy)) {
+			pr_err("%s Couldn't get bms_psy\n", __func__);
+			val->intval = 0;
+		}
+		else {
+			ret = power_supply_get_property(bms_psy,POWER_SUPPLY_PROP_VOLTAGE_NOW, &prop);
+			val->intval = prop.intval;
+		}
+		ret = 0;
+		break;
+#endif /* CONFIG_EXT_FUEL_GAGUE_SUPPORT */
+// drv add tankaikun, Apply ext fuel gague, 20241030 end
 
 		count = 0;
 		if (bm->gm1 != NULL)
@@ -1214,6 +1344,20 @@ static int bs_psy_get_property(struct power_supply *psy,
 		ret = 0;
 		break;
 	case POWER_SUPPLY_PROP_TEMP:
+// drv add tankaikun, Apply ext fuel gague, 20241030 start
+#if IS_ENABLED(CONFIG_EXT_FUEL_GAGUE_SUPPORT)
+		if (IS_ERR_OR_NULL(bms_psy)) {
+			pr_err("%s Couldn't get bms_psy\n", __func__);
+			val->intval = 250;
+		}
+		else {
+			ret = power_supply_get_property(bms_psy, POWER_SUPPLY_PROP_TEMP, &prop);
+			val->intval = prop.intval;
+		}
+		ret = 0;
+		break;
+#endif /* CONFIG_EXT_FUEL_GAGUE_SUPPORT */
+// drv add tankaikun, Apply ext fuel gague, 20241030
 
 		count = 0;
 		if (bm->gm1 != NULL)
@@ -1231,8 +1375,24 @@ static int bs_psy_get_property(struct power_supply *psy,
 		ret = 0;
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY_LEVEL:
+// drv add tankaikun, Apply ext fuel gague, 20241030 start
+#if IS_ENABLED(CONFIG_EXT_FUEL_GAGUE_SUPPORT)
+		if (IS_ERR_OR_NULL(bms_psy)) {
+			pr_err("%s Couldn't get bms_psy\n", __func__);
+			val->intval = 0;
+		}
+		else {
+			ret = power_supply_get_property(bms_psy,POWER_SUPPLY_PROP_CAPACITY, &prop);
+			val->intval = prop.intval;
+			val->intval = check_cap_level(val->intval);
+		}
+		break;
+#endif /* CONFIG_EXT_FUEL_GAGUE_SUPPORT */
+// drv add tankaikun, Apply ext fuel gague, 20241030 end
+
 		val->intval = check_cap_level(bs_data->bat_capacity);
 		break;
+#if 0
 	case POWER_SUPPLY_PROP_TIME_TO_FULL_NOW:
 		/* full or unknown must return 0 */
 		ret = check_cap_level(bs_data->bat_capacity);
@@ -1261,7 +1421,14 @@ static int bs_psy_get_property(struct power_supply *psy,
 		val->intval = abs(time_to_full);
 		ret = 0;
 		break;
+#endif
 	case POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN:
+#if IS_ENABLED(CONFIG_EXT_FUEL_GAGUE_SUPPORT)
+		if (!IS_ERR_OR_NULL(bms_psy)) {
+			power_supply_get_property(bms_psy, POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN, &prop);
+			val->intval = prop.intval;
+		}
+#else
 		if (check_cap_level(bs_data->bat_capacity) ==
 			POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN) {
 			val->intval = 0;
@@ -1282,7 +1449,7 @@ static int bs_psy_get_property(struct power_supply *psy,
 			q_max_uah = 100001;
 		}
 		val->intval = q_max_uah;
-
+#endif
 		break;
 	case POWER_SUPPLY_PROP_CONSTANT_CHARGE_VOLTAGE:
 		if (IS_ERR_OR_NULL(bs_data->chg_psy)) {
@@ -1302,7 +1469,13 @@ static int bs_psy_get_property(struct power_supply *psy,
 			}
 		}
 		break;
-
+//drv huangjiwu for pimc vbus start
+#if IS_ENABLED(CONFIG_READ_PMIC_VBUS)
+	case POWER_SUPPLY_PROP_INPUT_VOLTAGE_LIMIT:
+		val->intval = force_get_vbus_internal(bm->gm1);
+		break;
+#endif
+//drv huangjiwu for pimc vbus end
 
 	default:
 		ret = -EINVAL;
@@ -1390,8 +1563,9 @@ static void mtk_battery_external_power_changed(struct power_supply *psy)
 			bs_data->bat_status = POWER_SUPPLY_STATUS_DISCHARGING;
 		} else {
 			if (status.intval == POWER_SUPPLY_STATUS_NOT_CHARGING) {
-				bs_data->bat_status =
-					POWER_SUPPLY_STATUS_NOT_CHARGING;
+				//drv mod tankaikun, fix battery status show error, 20241104 start
+				//bs_data->bat_status =
+				//	POWER_SUPPLY_STATUS_NOT_CHARGING;
 
 				dv2_chg_psy = power_supply_get_by_name("mtk-mst-div-chg");
 				if (!IS_ERR_OR_NULL(dv2_chg_psy)) {
@@ -1402,9 +1576,16 @@ static void mtk_battery_external_power_changed(struct power_supply *psy)
 							POWER_SUPPLY_STATUS_CHARGING;
 						status.intval =
 							POWER_SUPPLY_STATUS_CHARGING;
-					}
+					} else {
+						bs_data->bat_status =
+							POWER_SUPPLY_STATUS_NOT_CHARGING;
+					} 
 					power_supply_put(dv2_chg_psy);
+				} else {
+					bs_data->bat_status =
+						POWER_SUPPLY_STATUS_NOT_CHARGING;
 				}
+				//drv mod tankaikun, fix battery status show error, 20241104 end
 			} else {
 				bs_data->bat_status =
 					POWER_SUPPLY_STATUS_CHARGING;

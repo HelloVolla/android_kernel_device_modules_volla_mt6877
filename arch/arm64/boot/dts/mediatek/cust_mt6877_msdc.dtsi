@@ -172,7 +172,7 @@
 	sd-uhs-ddr50;
 	sdcard-aggressive-pm;
 	cd-debounce-delay-ms = <0>;
-	cd-gpios = <&pio 3 GPIO_ACTIVE_LOW>;
+	cd-gpios = <&pio 162 GPIO_ACTIVE_LOW>;
 	vmmc-supply = <&mt_pmic_vmch_ldo_reg>;
 	vqmmc-supply = <&mt_pmic_vmc_ldo_reg>;
 	no-mmc;

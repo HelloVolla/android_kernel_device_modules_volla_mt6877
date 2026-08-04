@@ -720,7 +720,7 @@ static int ree_service_threads(uint32_t cmd, uint32_t ree_cpu)
 	return 0;
 }
 
-#if IS_ENABLED(CONFIG_TEE)
+#if 0 // IS_ENABLED(CONFIG_TEE)		// drv modify tee compile error 
 /* teec weak functions are used when teec function are unavailable. */
 __weak u32 teec_initialize_context(const char *name, struct teec_context *context)
 {

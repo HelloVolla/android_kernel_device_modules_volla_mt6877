@@ -618,4 +618,9 @@ extern const struct usb_ep_ops mtu3_ep0_ops;
 int get_dp_switch_status(struct ssusb_mtk *ssusb);
 void ssusb_parse_toggle_vbus(struct ssusb_mtk *ssusb, struct device_node *nd);
 
+#if IS_ENABLED(CONFIG_MTK_SPM_V4)
+void register_slp_set_infra_on_func(void (*slp_set_infra_on_func)(bool infra_on));
+void register_spm_resource_req_func(bool (*spm_resource_req_func)(unsigned int user, unsigned int req_mask));
+#endif
+
 #endif

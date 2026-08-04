@@ -1,0 +1,7 @@
+#prize add by xiaguohong start
+config PRIZE_DUAL_CAMERA_ENABLE
+	tristate "Support prize_dual_camera function"
+	default n
+	help
+		 Select Y to enable prize_dual_camera function
+#prize add by xiaguohong end

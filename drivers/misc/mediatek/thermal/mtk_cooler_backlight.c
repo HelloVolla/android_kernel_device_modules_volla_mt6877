@@ -16,6 +16,11 @@
 #include <linux/kobject.h>
 #include <linux/leds-mtk.h>
 
+/* pri added for software debounce of backlight throttling
+ * to avoid blinking due to thermal policy switching frequently */
+#include <linux/delay.h>
+#include <linux/workqueue.h>
+
 #include "mt-plat/mtk_thermal_monitor.h"
 
 #define mtk_cooler_backlight_dprintk(fmt, args...)	\
@@ -33,6 +38,10 @@ static unsigned int g_cl_id[BACKLIGHT_COOLER_NR];
 static unsigned int g_backlight_level;
 static unsigned int g_backlight_last_level;
 
+/* pri added for software debounce of backlight throttling
+ * to avoid blinking due to thermal policy switching frequently */
+struct delayed_work mtk_cooler_backlight_sw_debounce_dwork;
+
 
 static void mtk_cl_backlight_set_max_brightness_limit(void)
 {
@@ -47,7 +56,8 @@ static void mtk_cl_backlight_set_max_brightness_limit(void)
 			break;
 		case 1:
 			/* 70% */
-			setMaxBrightness(-1, 70, 0);
+			/* Pri modified for fix bug that 70% level didn't work */
+			setMaxBrightness(-1, 70, 1);
 			break;
 		case 2:
 			/* 40% */
@@ -63,6 +73,17 @@ static void mtk_cl_backlight_set_max_brightness_limit(void)
 		}
 	}
 }
+
+/* pri added for software debounce of backlight throttling
+ * to avoid blinking due to thermal policy switching frequently start */
+#define BACKLIGHT_COOLING_SW_DEBOUNCE_TIME_MS     2000
+static void backlight_cooling_throttle_delay_func(struct work_struct *work)
+{
+	mtk_cl_backlight_set_max_brightness_limit();
+	g_backlight_last_level = g_backlight_level;
+}
+/* pri added for software debounce of backlight throttling
+ * to avoid blinking due to thermal policy switching frequently end */
 
 	static int mtk_cl_backlight_get_max_state
 (struct thermal_cooling_device *cdev, unsigned long *state)
@@ -125,9 +146,18 @@ static void mtk_cl_backlight_set_max_brightness_limit(void)
 		 * KOBJ_CHANGE, envp);
 		 */
 
-		mtk_cl_backlight_set_max_brightness_limit();
+		/* pri modified for software debounce of backlight throttling
+		 * to avoid blinking due to thermal policy switching frequently start */
+		/* mtk_cl_backlight_set_max_brightness_limit(); */
+		/* g_backlight_last_level = g_backlight_level; */
+		if (unlikely(g_backlight_level != g_backlight_last_level))
+			mtk_cooler_backlight_dprintk("will set brightness level = %d, cur level = %d\n",
+										g_backlight_level, g_backlight_last_level);
+		mod_delayed_work(system_wq, &mtk_cooler_backlight_sw_debounce_dwork,
+						msecs_to_jiffies(BACKLIGHT_COOLING_SW_DEBOUNCE_TIME_MS));
+		/* pri modified for software debounce of backlight throttling
+ 		 * to avoid blinking due to thermal policy switching frequently end */
 
-		g_backlight_last_level = g_backlight_level;
 
 		/* mtk_cooler_backlight_dprintk
 		 * ("mtk_cl_backlight_set_cur_state()
@@ -194,6 +224,10 @@ int mtk_cooler_backlight_init(void)
 	if (err)
 		goto err_unreg;
 
+	/* pri added for software debounce of backlight throttling
+	 * to avoid blinking due to thermal policy switching frequently */
+	INIT_DELAYED_WORK(&mtk_cooler_backlight_sw_debounce_dwork,
+					backlight_cooling_throttle_delay_func);
 	return 0;
 
 err_unreg:
@@ -205,6 +239,9 @@ void mtk_cooler_backlight_exit(void)
 {
 	mtk_cooler_backlight_dprintk("exit\n");
 
+	/* pri added for software debounce of backlight throttling
+	 * to avoid blinking due to thermal policy switching frequently */
+	cancel_delayed_work_sync(&mtk_cooler_backlight_sw_debounce_dwork);
 	mtk_cooler_backlight_unregister_ltf();
 }
 // module_init(mtk_cooler_backlight_init);

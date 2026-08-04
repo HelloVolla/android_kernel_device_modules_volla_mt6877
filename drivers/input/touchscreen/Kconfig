@@ -20,6 +20,15 @@ config TOUCHSCREEN_MT6985_ALPHA_SUPPORT
          Set Y or M to select this feature for specific platform-mt6985,
          and set N to disable.
 
+config TOUCHSCREEN_GOODIX_CORE
+	tristate "Goodix berlin touchscreen"
+	help
+	  Say Y here if you have a Goodix berlin series touch controller
+	  to your system.
+	  
+	  If build module, say M.
+	  If unsure, say N.
+	  
 config TOUCHSCREEN_ILITEK_TOUCH
        tristate "ILITEK TOUCHSCREEN"
        help
@@ -44,6 +53,10 @@ config TOUCHSCREEN_FOCALTECH_TOUCH
          Set Y or M to select this feature for touch compile,
          and set N to disable.for car serdes touch feature.
 
+config TOUCHSCREEN_CHSC5448_P785
+	tristate "CHSC5448_P785 for Mediatek package"
+	default n
+
 source "$(KCONFIG_EXT_PREFIX)drivers/input/touchscreen/BoTai_Multi_Touch/Kconfig"
 source "$(KCONFIG_EXT_PREFIX)drivers/input/touchscreen/GT9966/Kconfig"
 source "$(KCONFIG_EXT_PREFIX)drivers/input/touchscreen/gt9xx/Kconfig"
@@ -51,5 +64,6 @@ source "$(KCONFIG_EXT_PREFIX)drivers/input/touchscreen/ILITEK/Kconfig"
 source "$(KCONFIG_EXT_PREFIX)drivers/input/touchscreen/synaptics_dsx_96789/Kconfig"
 source "$(KCONFIG_EXT_PREFIX)drivers/input/touchscreen/synaptics_dsx_96851/Kconfig"
 source "$(KCONFIG_EXT_PREFIX)drivers/input/touchscreen/NT36532/Kconfig"
+source "$(KCONFIG_EXT_PREFIX)drivers/input/touchscreen/focal_FT3519/Kconfig"
 
 endif

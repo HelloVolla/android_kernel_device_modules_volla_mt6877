@@ -47,37 +47,39 @@ static void mtk_usb_extcon_update_role(struct work_struct *work)
 
 	dev_info(extcon->dev, "cur_dr(%d) new_dr(%d)\n", cur_dr, new_dr);
 
-	/* none -> device */
-	if (cur_dr == USB_ROLE_NONE &&
-			new_dr == USB_ROLE_DEVICE) {
-		extcon_set_state_sync(extcon->edev, EXTCON_USB, true);
-	/* none -> host */
-	} else if (cur_dr == USB_ROLE_NONE &&
-			new_dr == USB_ROLE_HOST) {
-		extcon_set_state_sync(extcon->edev, EXTCON_USB_HOST, true);
-	/* device -> none */
-	} else if (cur_dr == USB_ROLE_DEVICE &&
-			new_dr == USB_ROLE_NONE) {
-		extcon_set_state_sync(extcon->edev, EXTCON_USB, false);
-	/* host -> none */
-	} else if (cur_dr == USB_ROLE_HOST &&
-			new_dr == USB_ROLE_NONE) {
-		extcon_set_state_sync(extcon->edev, EXTCON_USB_HOST, false);
-	/* device -> host */
-	} else if (cur_dr == USB_ROLE_DEVICE &&
-			new_dr == USB_ROLE_HOST) {
-		extcon_set_state_sync(extcon->edev, EXTCON_USB, false);
-		extcon_set_state_sync(extcon->edev,	EXTCON_USB_HOST, true);
-	/* host -> device */
-	} else if (cur_dr == USB_ROLE_HOST &&
-			new_dr == USB_ROLE_DEVICE) {
-		extcon_set_state_sync(extcon->edev, EXTCON_USB_HOST, false);
-		extcon_set_state_sync(extcon->edev,	EXTCON_USB, true);
-	}
-
 	/* usb role switch */
 	if (extcon->role_sw)
 		usb_role_switch_set_role(extcon->role_sw, new_dr);
+	else {
+		/* none -> device */
+		if (cur_dr == USB_ROLE_NONE && new_dr == USB_ROLE_DEVICE) {
+			extcon_set_state_sync(extcon->edev, EXTCON_USB, true);
+		/* none -> host */
+		} else if (cur_dr == USB_ROLE_NONE && new_dr == USB_ROLE_HOST) {
+			extcon_set_state_sync(extcon->edev,
+							EXTCON_USB_HOST, true);
+		/* device -> none */
+		} else if (cur_dr == USB_ROLE_DEVICE &&
+				new_dr == USB_ROLE_NONE) {
+			extcon_set_state_sync(extcon->edev, EXTCON_USB, false);
+		/* host -> none */
+		} else if (cur_dr == USB_ROLE_HOST && new_dr == USB_ROLE_NONE) {
+			extcon_set_state_sync(extcon->edev,
+							EXTCON_USB_HOST, false);
+		/* device -> host */
+		} else if (cur_dr == USB_ROLE_DEVICE &&
+				new_dr == USB_ROLE_HOST) {
+			extcon_set_state_sync(extcon->edev, EXTCON_USB, false);
+			extcon_set_state_sync(extcon->edev,
+							EXTCON_USB_HOST, true);
+		/* host -> device */
+		} else if (cur_dr == USB_ROLE_HOST &&
+				new_dr == USB_ROLE_DEVICE) {
+			extcon_set_state_sync(extcon->edev,
+							EXTCON_USB_HOST, false);
+			extcon_set_state_sync(extcon->edev, EXTCON_USB, true);
+		}
+	}
 
 	kfree(role);
 }
@@ -592,6 +594,8 @@ static int mtk_usb_extcon_gpio_init(struct mtk_extcon_info *extcon)
 			   &extcon->wq_detcable,
 			   msecs_to_jiffies(10));
 
+	device_init_wakeup(dev, true);
+
 	return 0;
 }
 
@@ -686,19 +690,6 @@ static int mtk_usb_extcon_probe(struct platform_device *pdev)
 
 	extcon->dev = dev;
 
-	/* extcon */
-	extcon->edev = devm_extcon_dev_allocate(dev, usb_extcon_cable);
-	if (IS_ERR(extcon->edev)) {
-		dev_err(dev, "failed to allocate extcon device\n");
-		return -ENOMEM;
-	}
-
-	ret = devm_extcon_dev_register(dev, extcon->edev);
-	if (ret < 0) {
-		dev_info(dev, "failed to register extcon device\n");
-		return ret;
-	}
-
 	/* usb role switch */
 	extcon->role_sw = usb_role_switch_get(extcon->dev);
 	if (IS_ERR(extcon->role_sw)) {
@@ -709,6 +700,20 @@ static int mtk_usb_extcon_probe(struct platform_device *pdev)
 	/* initial usb role */
 	if (extcon->role_sw)
 		extcon->c_role = USB_ROLE_NONE;
+	else {
+		/* extcon */
+		extcon->edev = devm_extcon_dev_allocate(dev, usb_extcon_cable);
+		if (IS_ERR(extcon->edev)) {
+			dev_info(dev, "failed to allocate extcon device\n");
+			return -ENOMEM;
+		}
+
+		ret = devm_extcon_dev_register(dev, extcon->edev);
+		if (ret < 0) {
+			dev_info(dev, "failed to register extcon device\n");
+			return ret;
+		}
+	}
 
 	/* vbus */
 	ret = mtk_usb_extcon_vbus_init(extcon);

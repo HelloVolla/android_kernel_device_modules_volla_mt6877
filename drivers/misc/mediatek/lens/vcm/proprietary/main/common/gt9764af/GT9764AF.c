@@ -133,18 +133,23 @@ static int initAF(void)
 {
 	LOG_INF("+\n");
 
+	//wait driver ic ready
+	mdelay(5);
+
 	if (*g_pAF_Opened == 1) {
 
 		//int i4RetValue = 0;
+		//int ret = 0;
 		//int cnt = 0;
 		unsigned char Temp;
 
 		s4AF_ReadReg(0x00, &Temp);  //ic info
 		LOG_INF("Check HW version: 0x00 is %x\n", Temp);
-		s4AF_WriteReg(0, 0x02, 0x00); //CONTROL
+		s4AF_WriteReg(0, 0x02, 0x02); //CONTROL
+		s4AF_WriteReg(0, 0x06, 0x40); //AAC2
 
-
-
+		mdelay(5);
+		setPosition(550);
 		spin_lock(g_pAF_SpinLock);
 		*g_pAF_Opened = 2;
 		spin_unlock(g_pAF_SpinLock);

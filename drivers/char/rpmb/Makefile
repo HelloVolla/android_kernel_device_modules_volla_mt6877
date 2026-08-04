@@ -2,6 +2,11 @@ ifneq ($(findstring $(CONFIG_TRUSTONIC_TEE_SUPPORT), y m),)
 ccflags-y += -I$(DEVICE_MODULES_PATH)/drivers/char/rpmb/drrpmb_gp/public
 ccflags-y += -I$(DEVICE_MODULES_PATH)/drivers/tee/gud/$(CONFIG_TRUSTONIC_TEE_VERSION)/MobiCoreDriver/public/
 endif
+# drv modify tee start
+ifneq ($(findstring $(CONFIG_MICROTRUST_TEE_SUPPORT), y m),)
+ccflags-y += -I$(DEVICE_MODULES_PATH)/drivers/char/rpmb/drrpmb_gp/public
+endif
+# drv modify tee end
 ccflags-y += -I$(DEVICE_MODULES_PATH)/drivers/ufs
 ccflags-y += -I$(srctree)/drivers/ufs
 ccflags-y += -I$(DEVICE_MODULES_PATH)/drivers/ufs/vendor

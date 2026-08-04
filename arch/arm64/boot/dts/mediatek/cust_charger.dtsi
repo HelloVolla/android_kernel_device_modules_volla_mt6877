@@ -1,0 +1,242 @@
+/*
+ * Copyright (c) 2024 MediaTek Inc.
+ *
+ */
+/* mtk charge */
+&pe5 {
+	vbat-cv = <4480>;
+	gauge = <&battery_manager>;
+	allow_not_check_ta_status;
+
+	idvchg-term = <800>;
+	ita-level-dual = <6000 5700 4400 3000>;
+	rcable-level-dual = <230 350 450 550>;
+};
+
+&charger {
+	battery_cv = <4450000>;
+	charger-configuration = <2>;
+
+	ac-charger-current = <3200000>;
+	ac-charger-input-current = <2050000>;
+
+	max_pwr = <66>;
+	fast_charging_indicator = <16>; // PE50
+
+	/* step charging */
+	cs,chrg-temp-zones-num = <4>;
+	cs,chrg-temp-zones = <0 4450 2500 0 0 0 0>,
+				<15 4450 2500 0 0 0 0>,
+				<45 4350 12500 4400 9000 4450 5000>,
+				<55 4100 2500 0 0 0 0>;
+	/* ffc charging */
+	cs,chrg-ffc-zones = <0 4450 250>,
+				<15 4450 250>,
+				<25 4480 1150>,
+				<35 4480 1150>,
+				<40 4480 1150>,
+				<45 4480 1150>,
+				<55 4100 250>;
+};
+
+/* fuel gague ic */
+&i2c7 {
+	fuelguage@64 {
+		compatible = "cellwise,cw221x";
+		reg = <0x64>;
+		bat_fcc_design = <4700000>; /* uAh */
+		batinfo = /bits/ 8 <
+		0x5A 0x00 0x00 0x00 0x00 0x00 0xF4 0x00 0x92 0xBE
+		0xBA 0xC5 0xB3 0xA9 0xC2 0xA0 0x8C 0xF8 0xD5 0xA3
+		0x7B 0x62 0x52 0x47 0x42 0x3C 0x35 0x72 0x49 0xDD
+		0x23 0xBE 0xC4 0xCB 0xD1 0xD2 0xD2 0xD0 0xCC 0xC8
+		0xC7 0xD6 0xC7 0xA8 0x9A 0x8F 0x88 0x81 0x7F 0x84
+		0x89 0x92 0xAA 0x83 0x5F 0xFF 0x20 0x00 0xAB 0x10
+		0x00 0x80 0x0F 0x00 0x00 0x00 0x64 0x19 0xA2 0xD0
+		0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0xE9>;
+	};
+};
+
+/* charger ic */
+&i2c7 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	sc8551s_master@66 {
+		compatible = "sc,sc8551m";
+		status = "okay";
+		reg = <0x66>;
+		rm_name = "sc8551m";
+		rm_slave_addr = /bits/ 8 <0x66>;
+		sc8551m,intr-gpios = <&pio 23 0x0>;
+		standalone {
+			chg_name = "primary_dvchg";
+			vbatovp = <4500000>;
+			vbatovp_alm = <4400000>;
+			ibatocp = <6100000>;
+			ibatocp_alm = <6000000>;
+			ibatucp_alm = <1000000>;
+			vbusovp = <10000000>;
+			vbusovp_alm = <9000000>;
+			ibusocp = <4250000>;
+			ibusocp_alm = <4000000>;
+			vacovp = <11000000>;
+			wdt = <30000000>;
+			ibat_rsense = <1>; /* 0: 2mohm, 1: 5mohm */
+			ibusucpf_deglitch = <0>; /* 0: 10us, 1: 5ms */
+			/* vbatovp_dis; */
+			/* vbatovp_alm_dis; */
+			/* ibatocp_dis; */
+			ibatocp_alm_dis;
+			ibatucp_alm_dis;
+			/* vbusovp_alm_dis; */
+			/* ibusocp_dis; */
+			ibusocp_alm_dis;
+			/* wdt_dis; */
+			/* tsbusotp_dis; */
+			tsbatotp_dis;
+			/* tdieotp_dis; */
+			/* reg_en; */
+			/* voutovp_dis; */
+			/* ibusadc_dis; */
+			/* vbusadc_dis; */
+			/* vacadc_dis; */
+			/* voutadc_dis; */
+			/* vbatadc_dis; */
+			/* ibatadc_dis; */
+			/* tsbusadc_dis; */
+			/* tsbatadc_dis; */
+			/* tdieadc_dis; */
+		};
+		master{
+			chg_name = "primary_dvchg";
+			vbatovp = <4500000>;
+			vbatovp_alm = <4400000>;
+			ibatocp = <6100000>;
+			ibatocp_alm = <6000000>;
+			ibatucp_alm = <1000000>;
+			vbusovp = <10000000>;
+			vbusovp_alm = <9000000>;
+			ibusocp = <4250000>;
+			ibusocp_alm = <4000000>;
+			vacovp = <11000000>;
+			wdt = <1000000>;
+			ibat_rsense = <1>; /* 0: 2mohm, 1: 5mohm */
+			ibusucpf_deglitch = <0>; /* 0: 10us, 1: 5ms */
+			vbatovp_dis;
+			vbatovp_alm_dis;
+			ibatocp_dis;
+			ibatocp_alm_dis;
+			ibatucp_alm_dis;
+			vbusovp_alm_dis;
+			/* ibusocp_dis; */
+			ibusocp_alm_dis;
+			wdt_dis;
+			/* tsbusotp_dis; */
+			/* tsbatotp_dis; */
+			/* tdieotp_dis; */
+			/* reg_en; */
+			/* voutovp_dis; */
+			/* ibusadc_dis; */
+			/* vbusadc_dis; */
+			/* vacadc_dis; */
+			/* voutadc_dis; */
+			vbatadc_dis;
+			ibatadc_dis;
+			/* tsbusadc_dis; */
+			/* tsbatadc_dis; */
+			/* tdieadc_dis; */
+		};
+	};
+};
+
+&i2c3 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	sc8551s_slave@66 {
+		compatible = "sc,sc8551s";
+		status = "okay";
+		reg = <0x66>;
+		rm_name = "sc8551s";
+		rm_slave_addr = /bits/ 8 <0x66>;
+		sc8551s,intr-gpios = <&pio 21 0x0>;
+		standalone {
+			chg_name = "secondary_dvchg";
+			vbatovp = <4500000>;
+			vbatovp_alm = <4400000>;
+			ibatocp = <6100000>;
+			ibatocp_alm = <6000000>;
+			ibatucp_alm = <1000000>;
+			vbusovp = <10000000>;
+			vbusovp_alm = <9000000>;
+			ibusocp = <4250000>;
+			ibusocp_alm = <4000000>;
+			vacovp = <11000000>;
+			wdt = <30000000>;
+			ibat_rsense = <1>; /* 0: 2mohm, 1: 5mohm */
+			ibusucpf_deglitch = <0>; /* 0: 10us, 1: 5ms */
+			/* vbatovp_dis; */
+			/* vbatovp_alm_dis; */
+			/* ibatocp_dis; */
+			ibatocp_alm_dis;
+			ibatucp_alm_dis;
+			/* vbusovp_alm_dis; */
+			/* ibusocp_dis; */
+			ibusocp_alm_dis;
+			/* wdt_dis; */
+			/* tsbusotp_dis; */
+			/* tsbatotp_dis; */
+			/* tdieotp_dis; */
+			/* reg_en; */
+			/* voutovp_dis; */
+			/* ibusadc_dis; */
+			/* vbusadc_dis; */
+			/* vacadc_dis; */
+			/* voutadc_dis; */
+			/* vbatadc_dis; */
+			/* ibatadc_dis; */
+			/* tsbusadc_dis; */
+			/* tsbatadc_dis; */
+			/* tdieadc_dis; */
+		};
+		slave{
+			chg_name = "secondary_dvchg";
+			vbatovp = <4500000>;
+			vbatovp_alm = <4400000>;
+			ibatocp = <6100000>;
+			ibatocp_alm = <6000000>;
+			ibatucp_alm = <1000000>;
+			vbusovp = <10000000>;
+			vbusovp_alm = <9000000>;
+			ibusocp = <4250000>;
+			ibusocp_alm = <4000000>;
+			vacovp = <11000000>;
+			wdt = <1000000>;
+			ibat_rsense = <1>; /* 0: 2mohm, 1: 5mohm */
+			ibusucpf_deglitch = <0>; /* 0: 10us, 1: 5ms */
+			vbatovp_dis;
+			vbatovp_alm_dis;
+			ibatocp_dis;
+			ibatocp_alm_dis;
+			ibatucp_alm_dis;
+			vbusovp_alm_dis;
+			/* ibusocp_dis; */
+			ibusocp_alm_dis;
+			wdt_dis;
+			/* tsbusotp_dis; */
+			/* tsbatotp_dis; */
+			/* tdieotp_dis; */
+			/* reg_en; */
+			/* voutovp_dis; */
+			/* ibusadc_dis; */
+			/* vbusadc_dis; */
+			/* vacadc_dis; */
+			/* voutadc_dis; */
+			vbatadc_dis;
+			ibatadc_dis;
+			/* tsbusadc_dis; */
+			/* tsbatadc_dis; */
+			/* tdieadc_dis; */
+		};
+	};
+};
+

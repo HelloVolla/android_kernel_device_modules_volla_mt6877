@@ -200,6 +200,29 @@ unsigned int mtk_ovl_outproc_sys_mapping_MT6991(struct mtk_ddp_comp *comp)
 	}
 }
 
+static bool is_right_ovl_comp_MT6991(struct mtk_ddp_comp *comp)
+{
+	switch (comp->id) {
+	case DDP_COMPONENT_OVL0_OUTPROC0:
+	case DDP_COMPONENT_OVL0_OUTPROC1:
+	case DDP_COMPONENT_OVL0_OUTPROC2:
+	case DDP_COMPONENT_OVL0_OUTPROC3:
+	case DDP_COMPONENT_OVL0_OUTPROC4:
+	case DDP_COMPONENT_OVL0_OUTPROC5:
+		return false;
+	case DDP_COMPONENT_OVL1_OUTPROC0:
+	case DDP_COMPONENT_OVL1_OUTPROC1:
+	case DDP_COMPONENT_OVL1_OUTPROC2:
+	case DDP_COMPONENT_OVL1_OUTPROC3:
+	case DDP_COMPONENT_OVL1_OUTPROC4:
+	case DDP_COMPONENT_OVL1_OUTPROC5:
+		return true;
+	default:
+		DDPDBG("%s invalid ovl module=%d\n", __func__, comp->id);
+		return false;
+	}
+}
+
 unsigned int mtk_ovl_outproc_aid_sel_MT6991(struct mtk_ddp_comp *comp)
 {
 	switch (comp->id) {
@@ -1005,6 +1028,7 @@ static const struct mtk_disp_ovl_outproc_data mt6991_ovl_driver_data = {
 	.aid_sel_mapping = &mtk_ovl_outproc_aid_sel_MT6991,
 	.aid_per_layer_setting = true,
 	.mmsys_mapping = &mtk_ovl_outproc_mmsys_mapping_MT6991,
+	.is_right_ovl_comp = &is_right_ovl_comp_MT6991,
 };
 
 static const struct of_device_id mtk_disp_ovl_outproc_driver_dt_match[] = {

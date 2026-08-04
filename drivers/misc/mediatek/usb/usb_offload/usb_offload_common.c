@@ -710,7 +710,6 @@ static void uaudio_disconnect_cb(struct snd_usb_audio *chip)
 	int ret;
 	struct usb_audio_dev *dev;
 	int card_num = chip->card->number;
-	struct usb_audio_stream_msg msg = {0};
 
 	USB_OFFLOAD_INFO("for card# %d\n", card_num);
 
@@ -725,14 +724,15 @@ static void uaudio_disconnect_cb(struct snd_usb_audio *chip)
 	/* clean up */
 	if (!dev->udev) {
 		USB_OFFLOAD_INFO("no clean up required\n");
+		mutex_unlock(&uodev->dev_lock);
+		ret = send_disconnect_ipi_msg_to_adsp();
+		USB_OFFLOAD_INFO("send_disconnect_ipi_msg_to_adsp msg, ret: %d\n", ret);
+		mutex_lock(&uodev->dev_lock);
 		goto done;
 	}
 
 	if (atomic_read(&dev->in_use)) {
 		mutex_unlock(&uodev->dev_lock);
-
-		msg.status = USB_AUDIO_STREAM_REQ_STOP;
-		msg.status_valid = 1;
 
 		/* write to audio ipi*/
 		ret = send_disconnect_ipi_msg_to_adsp();
@@ -2638,7 +2638,6 @@ static int check_is_multiple_ep(struct usb_host_config *config)
 int usb_offload_cleanup(void)
 {
 	int ret = 0;
-	struct usb_audio_stream_msg msg = {0};
 	unsigned int card_num = uodev->card_num;
 
 	USB_OFFLOAD_INFO("%d\n", __LINE__);
@@ -2648,9 +2647,6 @@ int usb_offload_cleanup(void)
 	uodev->adsp_inited = false;
 	uodev->opened = false;
 	uodev->speed = USB_SPEED_UNKNOWN;
-
-	msg.status = USB_AUDIO_STREAM_REQ_STOP;
-	msg.status_valid = 1;
 
 	/* write to audio ipi*/
 	ret = send_disconnect_ipi_msg_to_adsp();

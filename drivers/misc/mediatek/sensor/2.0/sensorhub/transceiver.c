@@ -65,7 +65,29 @@ struct transceiver_device {
 	atomic_t normal_wp_dropped;
 	atomic_t super_wp_dropped;
 	struct task_struct *task;
+/* drv add by liuxuhui for modify send lcm param to light sensor, 20230324-start */
+#if IS_ENABLED(CONFIG_PRIZE_PIXEL_MANAGER)
+        bool force_send_param;
+        struct timer_list send_lcm_param_timer;
+        struct work_struct send_lcm_param_worker;
+#endif
+/* drv add by liuxuhui for modify send lcm param to light sensor, 20230324-end */
 };
+
+/* drv add by liuxuhui for modify send lcm param to light sensor, 20230324-start */
+#if IS_ENABLED(CONFIG_PRIZE_PIXEL_MANAGER)
+#define SEND_LCM_PARAM_CYCLC 200 //1000
+//#define LCD_NAME "lcd-backlight"
+#define MAX_RETRY_TIMES 5
+#define ALS_ENABLE_FLAG 0X88
+#define DELAY_MSECONDS 200
+//#define LIGHT_POS_X 651
+//#define LIGHT_POS_Y 87
+extern unsigned short get_bl_level(void);
+extern void get_pix_rgb(int16_t *R, int16_t *G, int16_t *B);
+extern void reset_pix_rgb(void);
+#endif
+/* drv add by liuxuhui for modify send lcm param to light sensor, 20230324-end */
 
 static struct transceiver_device transceiver_dev;
 static DEFINE_RATELIMIT_STATE(ratelimit, 5 * HZ, 10);
@@ -80,7 +102,7 @@ static void transceiver_notify_func(struct sensor_comm_notify *n,
 	uint32_t wp = 0;
 	struct transceiver_device *dev = private_data;
 	struct data_notify *dnotify = (struct data_notify *)n->value;
-	uint64_t start_time = 0, end_time = 0, timeout_ns = 5000000;
+	uint64_t start_time = 0, end_time = 0, timeout_ns = 1000000;
 	uint64_t wait_spin_lock_end_time = 0, timesync_end_time = 0;
 	uint64_t kfifo_end_time = 0, complete_end_time = 0;
 
@@ -543,6 +565,16 @@ static int transceiver_enable(struct hf_device *hf_dev,
 			state->enable = true;
 		else
 			sensor_deregister_freq(sensor_type);
+/* drv add by liuxuhui for modify send lcm param to light sensor, 20230324-start */
+#if IS_ENABLED(CONFIG_PRIZE_PIXEL_MANAGER)
+		if(SENSOR_TYPE_LIGHT == sensor_type)
+		{
+			pr_info("debug light sensor v2\n");
+			dev->force_send_param = true;
+			schedule_work(&dev->send_lcm_param_worker);
+		}
+#endif
+/* drv add by liuxuhui for modify send lcm param to light sensor, 20230324-end */
 	} else {
 		ret = transceiver_comm_with(sensor_type,
 			SENS_COMM_CTRL_DISABLE_CMD, NULL, 0);
@@ -676,6 +708,95 @@ static int transceiver_custom_cmd(struct hf_device *hfdev, int sensor_type,
 {
 	return custom_cmd_comm_with(sensor_type, cust_cmd);
 }
+
+/* drv add by liuxuhui for modify send lcm param to light sensor, 20230324-start */
+#if IS_ENABLED(CONFIG_PRIZE_PIXEL_MANAGER)
+static int transceiver_send_lcm_brightness_and_rgb(void)
+{
+        struct transceiver_device *dev = &transceiver_dev;
+        int16_t dbuf[4] = {0};
+        int err = 0;
+        int16_t R = 0;
+        int16_t G = 0;
+        int16_t B = 0;
+        uint8_t retry_times = 0;
+        /* prize modified by gongtaitao for X9-530 start */
+        static int16_t last_R = -1;
+        static int16_t last_G = -1;
+        static int16_t last_B = -1;
+        static int16_t last_brightness = -1;
+        /* prize modified by gongtaitao for X9-530 end */
+
+        if (!dev->state[SENSOR_TYPE_LIGHT].enable) {
+                return 0;
+        }
+
+        get_pix_rgb(&R, &G, &B);
+        if (R == -1 || G == -1 || B == -1) {
+                while (retry_times < MAX_RETRY_TIMES) {
+                        mdelay(DELAY_MSECONDS);
+                        get_pix_rgb(&R, &G, &B);
+                        if (R != -1 && G != -1 && B != -1) {
+                                break;
+                        }
+                        retry_times++;
+                }
+
+                if (retry_times >= MAX_RETRY_TIMES && (R == -1 || G == -1 || B == -1)) {
+                        R = 0;
+                        G = 0;
+                        B = 0;
+                }
+        }
+
+        dbuf[0] = get_bl_level();
+        dbuf[1] = R;
+        dbuf[2] = G;
+        dbuf[3] = B;
+
+        /* prize modified by gongtaitao for X9-530 start */
+	if (unlikely(dev->force_send_param)) {
+			dev->force_send_param = false;
+	} else {
+		if (0 == dbuf[0] || (dbuf[0] == last_brightness && R == last_R &&
+			G == last_G && B == last_B)) {
+			return 0;
+		}
+	}
+
+        pr_info("transceiver_send_lcm_brightness_and_rgb light is enable, send param\n");
+        pr_info("last_brightness:%d ,dbuf[0]:%d ,last_R:%d ,R:%d ,last_G:%d ,G:%d ,last_B:%d ,B:%d\n",last_brightness,dbuf[0],last_R,R,last_G,G,last_B,B);
+        last_brightness = dbuf[0];
+        last_R = R;
+        last_G = G;
+        last_B = B;
+        /* prize modified by gongtaitao for X9-530 end */
+        err = transceiver_comm_with(SENSOR_TYPE_LIGHT, SENS_COMM_CTRL_PARAM_CMD,
+                (void *)dbuf, sizeof(dbuf));
+        if (0 != err) {
+                pr_err("error : %d\n", err);
+                return err;
+        }
+
+        return 0;
+}
+
+static void transceiver_send_lcm_param_work(struct work_struct *work)
+{
+        (void)transceiver_send_lcm_brightness_and_rgb();
+}
+
+static void transceiver_send_lcm_param_func(struct timer_list *list)
+{
+        struct transceiver_device *device = &transceiver_dev;
+
+        schedule_work(&device->send_lcm_param_worker);
+
+        mod_timer(&device->send_lcm_param_timer,
+                jiffies +  msecs_to_jiffies(SEND_LCM_PARAM_CYCLC));
+}
+#endif
+/* drv add by liuxuhui for modify send lcm param to light sensor, 20230324-end */
 
 static void transceiver_restore_sensor(struct transceiver_device *dev)
 {
@@ -956,6 +1077,15 @@ static int __init transceiver_init(void)
 	share_mem_config_handler_register(SHARE_MEM_SUPER_DATA_PAYLOAD_TYPE,
 		transceiver_shm_super_cfg, dev);
 
+/* drv add by liuxuhui for modify send lcm param to light sensor, 20230324-start */
+#if IS_ENABLED(CONFIG_PRIZE_PIXEL_MANAGER)
+		dev->force_send_param = false;
+        INIT_WORK(&dev->send_lcm_param_worker, transceiver_send_lcm_param_work);
+        timer_setup(&dev->send_lcm_param_timer, transceiver_send_lcm_param_func, 0);
+        mod_timer(&dev->send_lcm_param_timer,
+                          jiffies + msecs_to_jiffies(SEND_LCM_PARAM_CYCLC));
+#endif
+/* drv add by liuxuhui for modify send lcm param to light sensor, 20230324-end */
 	/*
 	 * NOTE: sensor ready must before host ready to avoid lost ready notify
 	 * host ready init must at the end of function.
@@ -1001,7 +1131,12 @@ out_device:
 static void __exit transceiver_exit(void)
 {
 	struct transceiver_device *dev = &transceiver_dev;
-
+/* drv add by liuxuhui for modify send lcm param to light sensor, 20230324-start */
+#if IS_ENABLED(CONFIG_PRIZE_PIXEL_MANAGER)
+	del_timer_sync(&dev->send_lcm_param_timer);
+	reset_pix_rgb();
+#endif
+/* drv add by liuxuhui for modify send lcm param to light sensor, 20230324-end */
 	share_mem_config_handler_unregister(SHARE_MEM_SUPER_DATA_PAYLOAD_TYPE);
 	share_mem_config_handler_unregister(SHARE_MEM_DATA_PAYLOAD_TYPE);
 	sensor_comm_notify_handler_unregister(SENS_COMM_NOTIFY_SUPER_FULL_CMD);

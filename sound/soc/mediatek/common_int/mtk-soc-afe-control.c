@@ -53,7 +53,7 @@
 #include <sound/jack.h>
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
-#if IS_ENABLED(CONFIG_MTK_SPM_V0)
+#if IS_ENABLED(CONFIG_MTK_SPM_V0) || IS_ENABLED(CONFIG_MTK_SPM_V4)
 #include <mtk_spm_sleep.h>
 #endif
 #if IS_ENABLED(CONFIG_MTK_AUDIO_SCP_SPKPROTECT_SUPPORT)
@@ -5047,7 +5047,7 @@ static int __init mtk_platform_sound_init(void)
 	ret = mtk_soc_voice_platform_init();
 	ret = mtk_soc_voice_bt_platform_init();
 	ret = mtk_voice_usb_driver_init();
-#if IS_ENABLED(CONFIG_MTK_SPM_V0)
+#if IS_ENABLED(CONFIG_MTK_SPM_V0) || IS_ENABLED(CONFIG_MTK_SPM_V4)
 	ret = RegisterConditionEnterSuspend(ConditionEnterSuspend);
 #endif
 	return ret;

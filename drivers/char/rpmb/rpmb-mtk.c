@@ -73,6 +73,12 @@ static struct mc_session_handle rpmb_gp_session = {0};
 static u32 rpmb_gp_devid = MC_DEVICE_ID_DEFAULT;
 static struct dciMessage_t *rpmb_gp_dci;
 #endif
+// drv modify tee compile error start
+#if IS_ENABLED(CONFIG_MICROTRUST_TEE_SUPPORT)
+#include "drrpmb_gp_Api.h"
+#include "drrpmb_Api.h"
+#endif
+// drv modify tee compile error end
 
 /* For nl socket */
 #ifdef __RPMB_KERNEL_NL_SUPPORT
@@ -1459,6 +1465,10 @@ out:
 #if IS_ENABLED(CONFIG_TRUSTONIC_TEE_SUPPORT)
 static enum mc_result rpmb_gp_execute_ufs(u32 cmdId)
 {
+	struct rpmb_dev *rpmbdev = NULL;
+	struct device *dev = NULL;
+	struct ufs_hba *hba = NULL;
+
 	switch (cmdId) {
 
 	case DCI_RPMB_CMD_READ_DATA:
@@ -1488,8 +1498,24 @@ static enum mc_result rpmb_gp_execute_ufs(u32 cmdId)
 		MSG(INFO, "%s: DCI_RPMB_CMD_PROGRAM_KEY.\n", __func__);
 		rpmb_dump_frame((struct rpmb_frame *)rpmb_gp_dci->request.frame);
 
+		rpmbdev = ufs_mtk_rpmb_get_raw_dev();
+		if (rpmbdev == NULL){
+			MSG(ERR, "%s: invalid rpmbdev (NULL).\n", __func__);
+			break;
+		}
+		dev = rpmbdev->dev.parent;
+		if (dev == NULL){
+			MSG(ERR, "%s: invalid dev (NULL).\n", __func__);
+			break;
+		}
+		hba = dev_get_drvdata(dev);
+		if (hba == NULL){
+			MSG(ERR, "%s: invalid hba (NULL).\n", __func__);
+			break;
+		}
 		/* program both region 0 and region 1 key */
-		rpmb_req_program_key_ufs(RPMB_REGION1, rpmb_gp_dci->request.frame);
+		if (hba->dev_info.wspecversion >= 0x0300)
+			rpmb_req_program_key_ufs(RPMB_REGION1, rpmb_gp_dci->request.frame);
 		rpmb_req_program_key_ufs(RPMB_REGION0, rpmb_gp_dci->request.frame);
 
 		break;
@@ -1847,6 +1873,7 @@ free:
 	return ret;
 }
 
+#if IS_ENABLED(CONFIG_TRUSTONIC_TEE_SUPPORT)
 static int rpmb_gp_execute_emmc(u32 cmdId)
 {
 	int ret;
@@ -1929,6 +1956,7 @@ static int rpmb_gp_execute_emmc(u32 cmdId)
 
 	return 0;
 }
+#endif
 
 int rpmb_req_get_wc_emmc(struct mmc_card *card, u8 *key, u32 *wc)
 {
@@ -3065,7 +3093,6 @@ out:
 	wake_up(&wait_rpmb);
 	return ret;
 }
-
 static int rpmb_create_netlink(void)
 {
 	int ret = 0;
@@ -3105,6 +3132,8 @@ static const struct file_operations rpmb_fops_emmc = {
 	.read = NULL,
 };
 
+// drv modify tee compile error start
+#if IS_ENABLED(CONFIG_DEVICE_MODULES_MMC_MTK_PRO)
 static int dt_get_boot_type(void)
 {
 	struct tag_bootmode *tags = NULL;
@@ -3132,6 +3161,8 @@ static int dt_get_boot_type(void)
 
 	return ret;
 }
+#endif
+// drv modify tee compile error end
 
 int mmc_rpmb_register(struct mmc_host *mmc)
 {
@@ -3226,6 +3257,7 @@ static int __init rpmb_init(void)
 	open_th = kthread_run(rpmb_thread, NULL, "rpmb_open");
 	if (IS_ERR(open_th))
 		MSG(ERR, "%s, init kthread_run failed!\n", __func__);
+#endif
 
 #ifdef __RPMB_KERNEL_NL_SUPPORT
 	init_waitqueue_head(&wait_rpmb);
@@ -3235,7 +3267,7 @@ static int __init rpmb_init(void)
 		MSG(ERR, "%s, init netlink failed!\n", __func__);
 	}
 #endif
-
+#if IS_ENABLED(CONFIG_TRUSTONIC_TEE_SUPPORT)
 fake_out:
 #endif
 
